@@ -337,10 +337,12 @@ extern int mtcp_sys_errno;
 # error "Missing sysdep.h file for this architecture."
 #endif /* end __arm__ */
 
+#ifndef ANDROID
 // FIXME:  Get rid of mtcp_sys_errno
 //   Must first define multi-threaded errno when glibc not present.
 #define __set_errno(Val) ( mtcp_sys_errno = (Val) ) /* required for sysdep-XXX.h */
 // #define __set_errno(Val) ( errno = mtcp_sys_errno = (Val) ) /* required for sysdep-XXX.h */
+#endif
 
 // #include <sysdeps/unix/x86_64/sysdep.h>  is not needed.
 // translate __NR_getpid to syscall # using i386 or x86_64

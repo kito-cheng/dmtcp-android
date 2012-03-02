@@ -71,7 +71,9 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#ifndef ANDROID
 #include <sys/sem.h>
+#endif
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
@@ -80,18 +82,41 @@
 #ifdef SETJMP
 # include <setjmp.h>
 #else
+#ifndef ANDROID
 # include <ucontext.h>
 #endif
-#include <sys/types.h>     // for gettid, tgkill, waitpid
+#endif
+#include <sys/types.h>     // for gettid, tkill, waitpid
 #include <sys/wait.h>	   // for waitpid
-#include <linux/unistd.h>  // for gettid, tgkill
+#include <linux/unistd.h>  // for gettid, tkill
 #include <fenv.h>          // for fegetround, fesetround
+#ifndef ANDROID
 #include <gnu/libc-version.h>
+#endif
 
 #define MTCP_SYS_STRCPY
 #define MTCP_SYS_STRLEN
 #define MTCP_SYS_GET_SET_THREAD_AREA
 #include "mtcp_internal.h"
+
+
+#ifdef ANDROID
+#include <bionic_tls.h>
+#include <pthread_internal.h>
+#include <asm/sigcontext.h>
+
+//XXX: just compilable
+#define setcontext(c) mtcp_abort()
+#define getcontext(c) -1
+
+static inline int sigandset(sigset_t *dest, sigset_t *left, sigset_t *right) {
+    sigset_t *__dest = (dest);
+    const sigset_t *__left = (left);
+    const sigset_t *__right = (right);
+    *dest = *__left & *__right;
+    return 0;
+}
+#endif
 
 // static int WAIT=1;
 // static int WAIT=0;
@@ -149,7 +174,11 @@ if (DEBUG_RESTARTING) \
 # define JMPBUF_SP jmpbuf[0].__jmpbuf[SAVEDSP]
 #else
 // In field of 'struct Thread':
+#ifndef ANDROID
 # define JMPBUF_SP savctx.uc_mcontext.gregs[SAVEDSP]
+#else
+# define JMPBUF_SP savctx.uc_mcontext.esp
+#endif
 #endif
 
 /* TLS segment registers used differently in i386 and x86_64. - Gene */
@@ -196,10 +225,13 @@ if (DEBUG_RESTARTING) \
  *       to accommodate this.                                    -- KAPIL
  */
 
+#ifndef ANDROID
 #if !__GLIBC_PREREQ (2,1)
 # error "glibc version too old"
 #endif
+#endif
 
+#ifndef ANDROID
 // NOTE: TLS_TID_OFFSET, TLS_PID_OFFSET determine offset independently of
 //     glibc version.  These STATIC_... versions serve as a double check.
 // Calculate offsets of pid/tid in pthread 'struct user_desc'
@@ -232,6 +264,7 @@ static int STATIC_TLS_TID_OFFSET()
 
   return offset;
 }
+#endif
 
 #if 0
 # if __GLIBC_PREREQ (2,11)
@@ -251,6 +284,7 @@ static int STATIC_TLS_TID_OFFSET()
 
 # define STATIC_TLS_PID_OFFSET() (STATIC_TLS_TID_OFFSET() + sizeof(pid_t))
 
+#ifndef ANDROID
 #if 1
 /* WHEN WE HAVE CONFIDENCE IN THIS VERSION, REMOVE ALL OTHER __GLIBC_PREREQ
  * AND MAKE THIS THE ONLY VERSION.  IT SHOULD BE BACKWARDS COMPATIBLE.
@@ -340,13 +374,33 @@ static int TLS_PID_OFFSET(void) {
   return pid_offset;
 }
 #endif
+#else /* ANDROID */
+#define TLS_TID_OFFSET() offsetof(struct pthread_internal_t,kernel_id)
+#define TLS_PID_OFFSET() TLS_TID_OFFSET()
+static void *mtcp_get_tls_base_addr(void);
+#endif
 
 /* this call to gettid is hijacked by DMTCP for PID/TID-Virtualization */
+#ifndef ANDROID
 #define GETTID() (int)syscall(SYS_gettid)
+#else
+#define GETTID() (int)syscall(__NR_gettid)
+#endif
 
 static sem_t sem_start;
 
 typedef struct Thread Thread;
+
+#ifdef ANDROID
+struct ucontext {
+    unsigned long     uc_flags;
+    struct ucontext  *uc_link;
+    stack_t       uc_stack;
+    struct sigcontext uc_mcontext;
+    sigset_t      uc_sigmask;   /* mask last for extensibility */
+};
+typedef struct ucontext ucontext_t;
+#endif
 
 struct Thread { Thread *next;         // next thread in 'threads' list
                 Thread *prev;        // prev thread in 'threads' list
@@ -753,6 +807,10 @@ void mtcp_init (char const *checkpointfilename,
   motherpid = mtcp_sys_getpid (); /* libc/getpid can lie if we had
 				   * used kernel fork() instead of libc fork().
 				   */
+#ifndef ANDROID
+  /*
+   * TODO : Android part
+   */
   {
     pid_t tls_pid, tls_tid;
     tls_pid = *(pid_t *) (mtcp_get_tls_base_addr() + TLS_PID_OFFSET());
@@ -764,6 +822,7 @@ void mtcp_init (char const *checkpointfilename,
       mtcp_abort ();
     }
   }
+#endif
 
   /* Get verify envar */
 
@@ -1163,7 +1222,12 @@ void mtcp_process_pthread_join (pthread_t pth)
 }
 
 #if defined(__i386__) || defined(__x86_64__)
+#ifndef ANDROID
 asm (".global clone ; .type clone,@function ; clone = __clone");
+#else /* ANDOIRD */
+asm (".global __pthread_clone ; .type __pthread_clone,@function ;"
+     " __pthread_clone = __clone");
+#endif
 #elif defined(__arm__)
 // In arm, '@' is a comment character;  Arm uses '%' in type directive
 asm (".global clone ; .type clone,%function ; clone = __clone");
@@ -1373,10 +1437,15 @@ static void setup_clone_entry (void)
     }
     p = NULL;
     while (mtcp_readmapsline (mapsfd, &mtcp_libc_area)) {
+#ifndef ANDROID
       p = strstr (mtcp_libc_area.name, "/libc-");
       /* We can't do a dlopen on the debug version of libc. */
       if (((p != NULL) && ((p[5] == '-') || (p[5] == '.'))) &&
           !strstr(mtcp_libc_area.name, "debug")) break;
+#else /* ANDROID */
+      p = strstr (mtcp_libc_area.name, "/libc.so");
+      if (p != NULL) break;
+#endif
     }
     close (mapsfd);
     if (p == NULL) {
@@ -1393,7 +1462,11 @@ static void setup_clone_entry (void)
 
   /* Find the clone routine therein */
 
+#ifndef ANDROID
   clone_entry = mtcp_get_libc_symbol ("__clone");
+#else
+  clone_entry = mtcp_get_libc_symbol ("__pthread_clone");
+#endif
   mtcp_sigaction_entry = mtcp_get_libc_symbol ("sigaction");
 }
 
@@ -2635,8 +2708,12 @@ void write_ckpt_to_file(int fd, int tmpDMTCPHeaderFd, int fdCkptFileOnDisk)
   }
 
   /* Drain stdin and stdout before checkpoint */
+#ifndef ANDROID
   tcdrain(STDOUT_FILENO);
   tcdrain(STDERR_FILENO);
+#else /* ANDROID */
+  /* XXX: Bionic don't provide tcdrain! */
+#endif
 
   int vsyscall_exists = 0;
   // Preprocess special segments like vsyscall, stack, heap etc.
@@ -3624,8 +3701,13 @@ static void save_sig_state (Thread *thisthread)
      * session leaders.
      * Similarly, SIGCANCEL/SIGTIMER is undocumented, but used by glibc.
      */
+#ifndef ANDROID
 #define SIGSETXID (__SIGRTMIN + 1)
 #define SIGCANCEL (__SIGRTMIN) /* aka SIGTIMER */
+#else /* ANDROID */
+#define SIGSETXID (SIGRTMIN + 1)
+#define SIGCANCEL (SIGRTMIN) /* aka SIGTIMER */
+#endif
     sigset_t set;
 
     sigfillset(&set);
@@ -3821,6 +3903,7 @@ static int mtcp_get_tls_segreg(void)
 #endif
   return (int)tlssegreg;
 }
+#ifndef ANDROID
 static void *mtcp_get_tls_base_addr(void)
 {
   struct user_desc gdtentrytls;
@@ -3840,6 +3923,12 @@ static void *mtcp_get_tls_base_addr(void)
   }
   return (void *)(*(unsigned long *)&(gdtentrytls.base_addr));
 }
+#else /* Android */
+static void *mtcp_get_tls_base_addr(void)
+{
+  return __get_tls();
+}
+#endif
 
 static void renametempoverperm (void)
 {
@@ -4314,6 +4403,7 @@ static int restarthread (void *threadv)
     }
 
     /* Create the thread so it can finish restoring itself. */
+#ifndef ANDROID
     pid_t tid = (*clone_entry)(restarthread,
                                // -128 for red zone
                                (void*)(child -> JMPBUF_SP - 128), // -128 for red zone
@@ -4323,6 +4413,14 @@ static int restarthread (void *threadv)
                                 CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID),
                                clone_arg, child -> parent_tidptr, NULL,
                                child -> actual_tidptr);
+#else
+    pid_t tid = syscall(__NR_clone, restarthread,
+                    (void*)(child -> JMPBUF_SP - 128), // -128 for red zone
+                    ((child -> clone_flags & ~CLONE_SETTLS) |
+                     CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID),
+                    clone_arg, child -> parent_tidptr, NULL,
+                    child -> actual_tidptr);
+#endif
 
     if (tid < 0) {
       MTCP_PRINTF("error %d recreating thread\n", errno);

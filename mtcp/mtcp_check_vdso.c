@@ -32,14 +32,30 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/resource.h> /* getrlimit, setrlimit */
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 #define ADDR_NO_RANDOMIZE  0x0040000  /* In case of old Linux, not defined */
 #define ADDR_COMPAT_LAYOUT 0x0200000  /* Not yet defined as of Ubuntu 8.04 */
 #include <unistd.h>
 #include <errno.h>
+#ifndef ANDROID
 #include <elf.h> // For value of AT_SYSINFO, Elf??_auxv_t
+#else
+typedef struct
+{
+  int a_type;                   /* Entry type */
+  union
+    {
+      long int a_val;           /* Integer value */
+      void *a_ptr;              /* Pointer value */
+      void (*a_fcn) (void);     /* Function pointer value */
+    } a_un;
+} Elf32_auxv_t;
+#endif
 #include "mtcp_sys.h" // For CLEAN_FOR_64BIT; for mtcp_sys_kernel_set_tls (ARM)
 #include "mtcp_internal.h" // For CLEAN_FOR_64BIT and PATH_MAX
+
 
 #ifdef __x86_64__
 # define ELF_AUXV_T Elf64_auxv_t
