@@ -51,3 +51,30 @@ LOCAL_MODULE := testmtcp
 LOCAL_SHARED_LIBRARIES := libmtcp
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := testmtcp3.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_LDFLAGS:= -Wl,--export-dynamic
+LOCAL_MODULE := testmtcp3
+LOCAL_SHARED_LIBRARIES := libmtcp
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := testmtcp4.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_LDFLAGS:= -Wl,--export-dynamic
+LOCAL_MODULE := testmtcp4
+LOCAL_SHARED_LIBRARIES := libmtcp
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := testmtcp5.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_LDFLAGS:= -Wl,--export-dynamic
+LOCAL_MODULE := testmtcp5
+LOCAL_SHARED_LIBRARIES := libmtcp
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
