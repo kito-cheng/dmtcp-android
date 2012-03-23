@@ -8,7 +8,7 @@ LOCAL_SRC_FILES:= mtcp.c mtcp_restart_nolibc.c \
         mtcp_safemmap.c mtcp_safe_open.c \
         mtcp_state.c mtcp_check_vdso.c mtcp_sigaction.c mtcp_fastckpt.c \
         bionic_pthread.c \
-        getcontest-x86.S setcontest-x86.S
+        getcontest-x86.S setcontest-x86.S clone-x86.S
 LOCAL_C_INCLUDES := bionic/libc/private/ \
                     bionic/libc/bionic/
 
