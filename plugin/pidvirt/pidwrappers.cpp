@@ -526,11 +526,18 @@ pid_t wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *rusage)
   return virtualPid;
 }
 
+#ifndef ANDROID
 extern "C" long ptrace (enum __ptrace_request request, ...)
+#else
+extern "C" long ptrace (int request, pid_t pid, void* addr, void* data)
+#endif
 {
+#ifndef ANDROID
   va_list ap;
+#endif
   pid_t virtualPid;
   pid_t realPid;
+#ifndef ANDROID
   void *addr;
   void *data;
 
@@ -539,6 +546,9 @@ extern "C" long ptrace (enum __ptrace_request request, ...)
   addr = va_arg(ap, void *);
   data = va_arg(ap, void *);
   va_end(ap);
+#else
+  virtualPid = pid;
+#endif
 
   realPid = VIRTUAL_TO_REAL_PID(virtualPid);
   long ptrace_ret =  _real_ptrace(request, realPid, addr, data);

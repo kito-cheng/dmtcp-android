@@ -34,12 +34,16 @@
 #include "syslogwrappers.h"
 #include "dmtcpplugin.h"
 #include "util.h"
+#ifndef ANDROID
 #include "sysvipc.h"
+#endif
 #include  "../jalib/jconvert.h"
 #include  "../jalib/jassert.h"
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 
 #define INITIAL_ARGV_MAX 32
 
@@ -251,8 +255,9 @@ static void dmtcpPrepareForExec(const char *path, char *const argv[],
   dmtcp::UniquePid::serialize ( wr );
   dmtcp::KernelDeviceToConnection::instance().serialize ( wr );
   dmtcp::ProcessInfo::instance().serialize ( wr );
+#ifndef ANDROID
   dmtcp::SysVIPC::instance().serialize ( wr );
-  dmtcp_process_event(DMTCP_EVENT_PREPARE_FOR_EXEC, (void*) &wr);
+#endif
 
   setenv ( ENV_VAR_SERIALFILE_INITIAL, serialFile.c_str(), 1 );
   JTRACE ( "Will exec filename instead of path" ) ( path ) (*filename);

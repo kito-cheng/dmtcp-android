@@ -49,7 +49,9 @@ struct user_desc {int dummy;}; /* <asm/ldt.h> is missing in Ubuntu 11.10 */
 #include <sys/procfs.h>
 #include <syslog.h>
 #include <sys/ipc.h>
+#ifndef ANDROID
 #include <sys/shm.h>
+#endif
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <dirent.h>
@@ -82,6 +84,11 @@ extern "C"
 {
 #endif
 
+#ifdef ANDROID
+#define __GLIBC_PREREQ(x, y) 0
+// Bionic's READLINK_RET_TYPE is int
+#endif
+
 #if __GLIBC_PREREQ(2,5)
 # define READLINK_RET_TYPE ssize_t
 #else
@@ -107,6 +114,10 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   MACRO(mmap64)                             \
   MACRO(mremap)                             \
   MACRO(munmap)
+
+#ifdef ANDROID
+#undef open64
+#endif
 
 #define FOREACH_GLIBC_WRAPPERS(MACRO)       \
   MACRO(dlopen)                             \
@@ -324,7 +335,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
                       struct sigaction *oldact);
   int _real_rt_sigaction(int signum, const struct sigaction *act,
                          struct sigaction *oldact);
+#ifndef ANDROID
   int _real_sigvec(int sig, const struct sigvec *vec, struct sigvec *ovec);
+#endif
 
   //set the mask
   int _real_sigblock(int mask);
@@ -352,7 +365,11 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int   _real_tkill(int tid, int sig);
   int   _real_tgkill(int tgid, int tid, int sig);
 
+#ifndef ANDROID
   long int _real_syscall(long int sys_num, ... );
+#else
+  int _real_syscall(int sys_num, ... );
+#endif
 
   int _real_pthread_create(pthread_t *thread, const pthread_attr_t *attr,
       void *(*start_routine)(void*), void *arg);
@@ -435,9 +452,12 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_shmdt (const void *shmaddr);
   int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf);
   pid_t _real_getpid();
-
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef ANDROID
+#define open64 open
 #endif
 
 #endif

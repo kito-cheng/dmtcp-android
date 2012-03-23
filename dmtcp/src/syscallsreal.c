@@ -45,11 +45,24 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <assert.h>
+
+#ifdef ANDROID
+#define SYS_getpid  __NR_getpid
+#define SYS_getppid __NR_getppid
+#define SYS_gettid  __NR_gettid
+#define SYS_tkill   __NR_tkill
+#define SYS_tgkill  __NR_tgkill
+#endif
+
 typedef int ( *funcptr_t ) ();
 typedef pid_t ( *funcptr_pid_t ) ();
 typedef funcptr_t ( *signal_funcptr_t ) ();
 
+#ifndef ANDROID
 static pthread_mutex_t theMutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+#else
+static pthread_mutex_t theMutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+#endif
 
 LIB_PRIVATE pid_t gettid() {
   return syscall(SYS_gettid);
@@ -622,10 +635,12 @@ LIB_PRIVATE
 int _real_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
   REAL_FUNC_PASSTHROUGH ( sigaction ) ( signum, act, oldact );
 }
+#ifndef ANDROID
 LIB_PRIVATE
 int _real_sigvec(int signum, const struct sigvec *vec, struct sigvec *ovec){
   REAL_FUNC_PASSTHROUGH ( sigvec ) ( signum, vec, ovec );
 }
+#endif
 
 //set the mask
 LIB_PRIVATE
@@ -767,7 +782,11 @@ FILE * _real_fopen64( const char *path, const char *mode ) {
 
 /* See comments for syscall wrapper */
 LIB_PRIVATE
+#ifndef ANDROID
 long int _real_syscall(long int sys_num, ... ) {
+#else
+int _real_syscall(int sys_num, ... ) {
+#endif
   int i;
   void * arg[7];
   va_list ap;
@@ -860,6 +879,7 @@ int _real_shmdt (const void *shmaddr) {
                           message sizes, etc. */
 #endif
 
+#ifndef ANDROID
 LIB_PRIVATE
 int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf) {
 #ifdef __i386__
@@ -868,6 +888,7 @@ int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf) {
   REAL_FUNC_PASSTHROUGH ( shmctl ) (shmid, cmd , buf);
 #endif
 }
+#endif
 
 LIB_PRIVATE
 pid_t _real_getpid() {

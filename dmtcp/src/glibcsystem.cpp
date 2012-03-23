@@ -143,7 +143,11 @@ out:
     INIT_LOCK ();
 
     /* Exec the shell.  */
+#ifndef ANDROID
     (void) execve (SHELL_PATH, (char *const *) new_argv, __environ);
+#else
+    (void) execve (SHELL_PATH, (char *const *) new_argv, environ);
+#endif
     _exit (127);
   }
   else if (pid < (pid_t) 0)

@@ -275,6 +275,13 @@ extern "C" int pthread_tryjoin_np(pthread_t thread, void **retval)
   return ret;
 }
 
+#ifdef ANDROID
+# define TIMEVAL_TO_TIMESPEC(tv, ts) {                                   \
+        (ts)->tv_sec = (tv)->tv_sec;                                    \
+        (ts)->tv_nsec = (tv)->tv_usec * 1000;                           \
+}
+
+#endif
 extern "C" int pthread_timedjoin_np(pthread_t thread, void **retval,
                                     const struct timespec *abstime)
 {

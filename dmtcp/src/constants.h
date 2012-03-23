@@ -113,8 +113,13 @@
 
 #define GLIBC_BASE_FUNC isalnum
 
+#ifndef ANDROID
 #define LIBDL_BASE_FUNC dlinfo
 #define LIBDL_BASE_FUNC_STR "dlinfo"
+#else
+#define LIBDL_BASE_FUNC dlerror
+#define LIBDL_BASE_FUNC_STR "dlerror"
+#endif
 #define ENV_VAR_DLSYM_OFFSET "DMTCP_DLSYM_OFFSET"
 
 //this list should be kept up to date with all "protected" environment vars

@@ -25,7 +25,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/version.h>
+#ifndef ANDROID
 #include <gnu/libc-version.h>
+#endif
 
 
 

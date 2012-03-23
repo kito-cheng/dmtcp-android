@@ -35,6 +35,18 @@
 #include  "../jalib/jassert.h"
 #include  "../jalib/jfilesystem.h"
 
+#ifdef ANDROID
+char *strchrnul(char *s, int c) {
+  size_t len = strlen(s);
+  char *ret = strchr(s, c);
+  if (ret) {
+    return ret;
+  } else {
+    return s + len;
+  }
+}
+#endif
+
 void dmtcp::Util::setVirtualPidEnvVar(pid_t pid, pid_t ppid)
 {
   char buf[80];
@@ -339,7 +351,11 @@ void dmtcp::Util::prepareDlsymWrapper()
   void* dlsym_addr = NULL;
   int diff;
   void* handle = NULL;
+#ifndef ANDROID
   handle = dlopen("libdl.so.2", RTLD_NOW);
+#else
+  handle = dlopen("libdl.so", RTLD_NOW);
+#endif
   if (handle == NULL) {
     fprintf(stderr, "dmtcp: get_libc_symbol: ERROR in dlopen: %s \n",
             dlerror());

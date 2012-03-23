@@ -34,6 +34,10 @@
 #include  "../jalib/jconvert.h"
 #include  "../jalib/jfilesystem.h"
 
+#ifdef ANDROID
+extern "C" pid_t  getsid(pid_t);
+#endif
+
 static pthread_mutex_t tblLock = PTHREAD_MUTEX_INITIALIZER;
 
 static void _do_lock_tbl()
@@ -244,7 +248,11 @@ void dmtcp::ProcessInfo::refreshTidVector()
 {
   dmtcp::vector< pid_t >::iterator iter;
   for (iter = _tidVector.begin(); iter != _tidVector.end(); ) {
+#ifndef ANDROID
     int retVal = syscall(SYS_tgkill, _pid, *iter, 0);
+#else
+    int retVal = syscall(__NR_tgkill, _pid, *iter, 0);
+#endif
     if (retVal == -1 && errno == ESRCH) {
       iter = _tidVector.erase( iter );
     } else {

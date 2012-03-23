@@ -27,7 +27,9 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/ipc.h>
+#ifndef ANDROID
 #include <sys/shm.h>
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -45,6 +47,10 @@
 #include "util.h"
 #include  "../jalib/jassert.h"
 #include  "../jalib/jconvert.h"
+
+#ifdef ANDROID
+#include <termios.h>
+#endif
 
 
 #ifdef EXTERNAL_SOCKET_HANDLING
@@ -314,6 +320,7 @@ extern "C" int open (const char *path, int flags, ... )
 // properly.
 
 // FIXME: Add the 'fn64' wrapper test cases to dmtcp test suite.
+#ifndef ANDROID
 extern "C" int open64 (const char *path, int flags, ... )
 {
   mode_t mode;
@@ -326,6 +333,7 @@ extern "C" int open64 (const char *path, int flags, ... )
   }
   return _open_open64_work(_real_open64, path, flags, mode);
 }
+#endif
 
 
 static FILE *_fopen_fopen64_work(FILE* (*fn)(const char *path, const char *mode),
@@ -458,7 +466,11 @@ extern "C" {
 int send_sigwinch = 0;
 }
 
+#ifndef ANDROID
 extern "C" int ioctl(int d,  unsigned long int request, ...)
+#else
+extern "C" int ioctl(int d,  int request, ...)
+#endif
 {
   va_list ap;
   int retval;

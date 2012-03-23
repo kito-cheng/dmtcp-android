@@ -46,7 +46,9 @@
 #include "connectionmanager.h"
 #include "uniquepid.h"
 #include "dmtcpworker.h"
+#ifndef ANDROID
 #include "sysvipc.h"
+#endif
 #include "syscallwrappers.h"
 #include "syslogwrappers.h"
 #include "util.h"
@@ -270,7 +272,7 @@ static int libtorque_init()
     }
     // initialize tm_spawn_ptr
     JNOTE("Initialize libtorque dlopen handler")(libpath);
-    char *error = NULL;
+    const char *error = NULL;
     _libtorque_handle = _real_dlopen(libpath.c_str(),RTLD_LAZY);
     if( !_libtorque_handle ){
       error = dlerror();

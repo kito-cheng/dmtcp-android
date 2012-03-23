@@ -31,7 +31,9 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 #include <netdb.h>
 
 #include "dmtcpworker.h"
@@ -49,7 +51,9 @@
 #include "ckptserializer.h"
 #include "remexecwrappers.h"
 #include "util.h"
+#ifndef ANDROID
 #include "sysvipc.h"
+#endif
 #include  "../jalib/jsocket.h"
 #include  "../jalib/jfilesystem.h"
 #include  "../jalib/jconvert.h"
@@ -254,8 +258,9 @@ static void prepareLogAndProcessdDataFromSerialFile()
 
     ProcessInfo::instance().serialize ( rd );
     ProcessInfo::instance().postExec();
+#ifndef ANDROID
     SysVIPC::instance().serialize ( rd );
-    dmtcp_process_event(DMTCP_EVENT_POST_EXEC, (void*) &rd);
+#endif
     _dmtcp_unsetenv(ENV_VAR_SERIALFILE_INITIAL);
   } else {
     //dmtcp::VirtualPidTable::instance().updateMapping(getppid(), _real_getppid());
@@ -632,7 +637,9 @@ void dmtcp::DmtcpWorker::waitForStage2Checkpoint()
   theCheckpointState->preCheckpointFdLeaderElection();
   JTRACE ( "locked" );
 
+#ifndef ANDROID
   SysVIPC::instance().leaderElection();
+#endif
 
   WorkerState::setCurrentState ( WorkerState::FD_LEADER_ELECTION );
 
@@ -650,7 +657,9 @@ void dmtcp::DmtcpWorker::waitForStage2Checkpoint()
   theCheckpointState->preCheckpointDrain();
   JTRACE ( "drained" );
 
+#ifndef ANDROID
   SysVIPC::instance().preCkptDrain();
+#endif
 
   WorkerState::setCurrentState ( WorkerState::DRAINED );
 
@@ -667,7 +676,9 @@ void dmtcp::DmtcpWorker::waitForStage2Checkpoint()
 #endif
 
   dmtcp::ProcessInfo::instance().preCheckpoint();
+#ifndef ANDROID
   SysVIPC::instance().preCheckpoint();
+#endif
 
   dmtcp_process_event(DMTCP_EVENT_PRE_CKPT, NULL);
 
@@ -843,7 +854,10 @@ void dmtcp::DmtcpWorker::postRestart()
   theCheckpointState->postRestart();
 
   dmtcp::ProcessInfo::instance().postRestart();
+#ifndef ANDROID
   SysVIPC::instance().postRestart();
+#endif
+
 }
 
 void dmtcp::DmtcpWorker::waitForStage3Refill( bool isRestart )
@@ -872,7 +886,9 @@ void dmtcp::DmtcpWorker::waitForStage3Refill( bool isRestart )
   delete theCheckpointState;
   theCheckpointState = NULL;
 
+#ifndef ANDROID
   SysVIPC::instance().postCheckpoint();
+#endif
   if (!isRestart) {
     dmtcp_process_event(DMTCP_EVENT_POST_CKPT, NULL);
   }
@@ -885,7 +901,9 @@ void dmtcp::DmtcpWorker::waitForStage4Resume()
   waitForCoordinatorMsg ( "RESUME", DMT_DO_RESUME );
   JTRACE ( "got resume message" );
 
+#ifndef ANDROID
   SysVIPC::instance().preResume();
+#endif
 }
 
 void dmtcp::DmtcpWorker::restoreVirtualPidTable()

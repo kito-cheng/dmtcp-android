@@ -37,6 +37,13 @@
 #include "../jalib/jalloc.h"
 #include "../jalib/jfilesystem.h"
 
+#ifdef ANDROID
+#define PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP \
+        PTHREAD_RWLOCK_INITIALIZER
+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP \
+        PTHREAD_RECURSIVE_MUTEX_INITIALIZER
+#endif
+
 /*
  * WrapperProtectionLock is used to make the checkpoint safe by making sure
  *   that no user-thread is executing any DMTCP wrapper code when it receives
