@@ -427,7 +427,11 @@ static int open_ckpt_to_read(char *filename, char *envp[])
   int fds[2];
   char fc;
   char *gzip_cmd = "gzip";
+#ifndef ANDROID
   static char *gzip_args[] = { "gzip", "-d", "-", NULL };
+#else
+  static char *gzip_args[] = { "gzip", "-d", NULL };
+#endif
 #ifdef HBICT_DELTACOMP
   char *hbict_cmd = "hbict";
   static char *hbict_args[] = { "hbict", "-r", NULL };
