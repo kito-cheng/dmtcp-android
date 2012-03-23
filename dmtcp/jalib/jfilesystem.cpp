@@ -33,6 +33,10 @@
 #include "jalib.h"
 #include "../src/constants.h"
 
+#ifdef ANDROID
+#define dirent64 dirent
+#endif
+
 namespace
 {
   // In Red Hat Enterprise Linux Server 5.4 (Linux kernel 2.6.18)
@@ -272,9 +276,22 @@ jalib::StringVector jalib::Filesystem::GetProgramArgs()
     char * lineptr = ( char* ) malloc ( 512 ); //getdelim will auto-grow this buffer
     size_t len = 511;
 
+#ifndef ANDROID
     while ( getdelim ( &lineptr, &len, '\0', args ) >= 0 ) {
       rv.push_back ( lineptr );
     }
+#else
+    jalib::string arg;
+    int c;
+    while ( (c = fgetc(args)) != EOF ){
+      if (c != 0) {
+        arg += c;
+      } else {
+        rv.push_back(arg);
+        arg = jalib::string();
+      }
+    }
+#endif
 
     free ( lineptr );
     jalib::fclose(args);
@@ -296,7 +313,11 @@ jalib::IntVector jalib::Filesystem::ListOpenFds()
   IntVector fdVec;
 
   while (true) {
+#ifndef ANDROID
     int nread = jalib::syscall(SYS_getdents, fd, buf, allocation);
+#else
+    int nread = jalib::syscall(__NR_getdents, fd, buf, allocation);
+#endif
     if (nread == 0) {
       break;
     }

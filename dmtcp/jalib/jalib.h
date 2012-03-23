@@ -22,6 +22,7 @@
 #ifndef JALIB_H
 #define JALIB_H
 
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -40,7 +41,11 @@ namespace jalib {
     int   (*close)(int fd);
     int   (*fclose)(FILE *fp);
 
+#ifndef ANDROID
     long int (*syscall)(long int sys_num, ...);
+#else
+    int (*syscall)(int sys_num, ...);
+#endif
     void*    (*mmap)(void *addr, size_t length, int prot, int flags, int fd,
                      off_t offset);
     int      (*munmap)(void *addr, size_t length);
@@ -77,7 +82,11 @@ namespace jalib {
   int close(int fd);
   int fclose(FILE *fp);
 
+#ifndef ANDROID
   long int syscall(long int sys_num, ...);
+#else
+  int syscall(int sys_num, ...);
+#endif
   void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
   int   munmap(void *addr, size_t length);
 

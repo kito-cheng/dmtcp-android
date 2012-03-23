@@ -30,7 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#ifndef ANDROID
 #include <execinfo.h> /* For backtrace() */
+#endif
 #define BT_SIZE 50 /* Maximum size backtrace of stack */
 
 #ifdef HAVE_CONFIG_H

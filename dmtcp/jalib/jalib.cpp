@@ -33,6 +33,8 @@
 #include <fstream>
 #include "jalib.h"
 
+#include <sys/syscall.h>
+
 jalib::JalibFuncPtrs jalib::jalibFuncPtrs;
 int jalib::jalib_funcptrs_initialized = 0;
 int jalib::stderrFd = -1;
@@ -113,7 +115,11 @@ namespace jalib {
     REAL_FUNC_PASSTHROUGH(int, fclose) (fp);
   }
 
+#ifndef ANDROID
   long int syscall(long int sys_num, ...) {
+#else
+  int syscall(int sys_num, ...) {
+#endif
     int i;
     void * arg[7];
     va_list ap;
@@ -125,8 +131,13 @@ namespace jalib {
 
     // /usr/include/unistd.h says syscall returns long int (contrary to man
     // page)
+#ifndef ANDROID
     REAL_FUNC_PASSTHROUGH(long int, syscall) (sys_num, arg[0], arg[1], arg[2],
                                               arg[3], arg[4], arg[5], arg[6]);
+#else
+    REAL_FUNC_PASSTHROUGH(int, syscall) (sys_num, arg[0], arg[1], arg[2],
+                                              arg[3], arg[4], arg[5], arg[6]);
+#endif
   }
 
   void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {

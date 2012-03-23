@@ -90,9 +90,13 @@ namespace jalib
   JCONVERT_DECLARE_StringToX ( unsigned long, unsigned long, strtoul );
   JCONVERT_DECLARE_StringToX ( long long, long long, strtoll );
   JCONVERT_DECLARE_StringToX ( unsigned long long, unsigned long long, strtoull );
+#ifndef ANDROID
   JCONVERT_DECLARE_StringToX ( float, float, strtof );
+#endif
   JCONVERT_DECLARE_StringToX ( double, double, strtod );
+#ifndef ANDROID
   JCONVERT_DECLARE_StringToX ( long double, long double, strtold )
+#endif
 
 
 #undef JCONVERT_DECLARE_StringToX

@@ -27,7 +27,9 @@
 #include <dlfcn.h>
 
 #include <fstream>
+#ifndef ANDROID
 #include <execinfo.h>  /* For backtrace() */
+#endif
 
 #include "jalib.h"
 #include "jconvert.h"
@@ -72,7 +74,11 @@ jassert_internal::JAssert& jassert_internal::JAssert::Text ( const char* msg )
   return *this;
 }
 
+#ifndef ANDROID
 static pthread_mutex_t logLock = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#else
+static pthread_mutex_t logLock = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER;
+#endif
 
 bool jassert_internal::lockLog()
 {
@@ -189,6 +195,7 @@ static const jalib::string writeJbacktraceMsg() {
 }
 
 static void writeBacktrace() {
+#ifndef ANDROID
   void *buffer[BT_SIZE];
   int nptrs = backtrace(buffer, BT_SIZE);
   dmtcp::ostringstream o;
@@ -200,6 +207,7 @@ static void writeBacktrace() {
     backtrace_symbols_fd( buffer, nptrs, fd );
     close(fd);
   }
+#endif
 }
 
 // This routine is called when JASSERT triggers.  Something failed.
