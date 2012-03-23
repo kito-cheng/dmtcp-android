@@ -387,7 +387,7 @@ static int TLS_PID_OFFSET(void) {
 #else /* ANDROID */
 #define TLS_TID_OFFSET() offsetof(struct pthread_internal_t,kernel_id)
 #define TLS_PID_OFFSET() TLS_TID_OFFSET()
-static void *mtcp_get_tls_base_addr(void);
+#define mtcp_get_tls_base_addr() (((void**)__get_tls())[TLS_SLOT_THREAD_ID])
 #endif
 
 /* this call to gettid is hijacked by DMTCP for PID/TID-Virtualization */
@@ -441,6 +441,10 @@ struct Thread { Thread *next;         // next thread in 'threads' list
 #else
                 struct user_desc gdtentrytls[1];
 #endif
+#ifdef ANDROID
+                void *tls;
+#endif
+
                 pthread_t pth;
               };
 
@@ -537,7 +541,9 @@ static Thread *threads_freelist = NULL;
 static struct sigaction sigactions[NSIG];  /* signal handlers */
 #else
 /* In bionic SIGRTMAX = _NSIG = 64, but NSIG = 32...*/
-static struct sigaction sigactions[SIGRTMAX+1];  /* signal handlers */
+#undef SIGRTMAX
+#define SIGRTMAX 31
+static struct sigaction sigactions[NSIG];  /* signal handlers */
 #endif
 static size_t restore_size;
 static VA restore_begin, restore_end;
@@ -561,6 +567,7 @@ static void (*callback_pre_resume_user_thread)(int is_ckpt, int is_restart) = NU
 static void (*callback_send_stop_signal)(pid_t tid, int *retry_signalling,
                                          int *retval) = NULL;
 
+#ifndef ANDROID
 static int (*clone_entry) (int (*fn) (void *arg),
                            void *child_stack,
                            int flags,
@@ -568,6 +575,21 @@ static int (*clone_entry) (int (*fn) (void *arg),
                            int *parent_tidptr,
                            struct user_desc *newtls,
                            int *child_tidptr) = NULL;
+#else
+static int (*clone_entry) (int (*fn) (void *arg),
+                           void *child_stack,
+                           int flags,
+                           void *arg) = NULL;
+static int (*sys_clone_entry) (int (*fn) (void *arg),
+                               void *child_stack,
+                               int flags,
+                               void *arg,
+                               int *) = NULL;
+int __pthread_clone_r (int (*fn) (void *arg),
+                               void *child_stack,
+                               int flags,
+                               void *arg);
+#endif
 
 int (*mtcp_sigaction_entry) (int sig, const struct sigaction *act,
                              struct sigaction *oact);
@@ -823,6 +845,16 @@ void mtcp_init (char const *checkpointfilename,
     if ((tls_pid != motherpid) || (tls_tid != motherpid)) {
       MTCP_PRINTF("getpid %d, tls pid %d, tls tid %d, must all match\n",
                   motherpid, tls_pid, tls_tid);
+      mtcp_abort ();
+    }
+  }
+#else
+  {
+    pid_t tls_tid;
+    tls_tid = *(pid_t *) (((unsigned char*)mtcp_get_tls_base_addr()) + TLS_TID_OFFSET());
+    if ((tls_tid != motherpid)) {
+      MTCP_PRINTF("getpid %d, tls tid %d, must all match\n",
+                  motherpid, tls_tid);
       mtcp_abort ();
     }
   }
@@ -1139,8 +1171,12 @@ Thread *mtcp_prepare_for_clone (int (*fn) (void *arg), void *child_stack,
     /* Save exactly what the caller is supplying */
 
     thread -> clone_flags   = flags;
+#ifndef ANDROID
     thread -> parent_tidptr = parent_tidptr;
+    thread -> given_tidptr  = child_tidptr;
+#else
     thread -> given_tidptr  = *child_tidptr;
+#endif
 
     /* We need the CLEARTID feature so we can detect
      *   when the thread has exited
@@ -1149,10 +1185,11 @@ Thread *mtcp_prepare_for_clone (int (*fn) (void *arg), void *child_stack,
      */
 
     if (!(*flags & CLONE_CHILD_CLEARTID)) {
+#ifndef ANDROID
       *child_tidptr = &(thread -> child_tid);
-
-      /* Force CLEARTID */
-      *flags |= CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID;
+#else
+      *child_tidptr = thread -> given_tidptr;
+#endif
     }
     thread -> actual_tidptr = *child_tidptr;
     DPRINTF("thread %p -> actual_tidptr %p\n", thread, thread -> actual_tidptr);
@@ -1187,8 +1224,12 @@ int __clone (int (*fn) (void *arg), void *child_stack, int flags, void *arg,
           fn, child_stack, flags, arg);
   DPRINTF("parent_tidptr=%p, newtls=%p, child_tidptr=%p\n",
           parent_tidptr, newtls, child_tidptr);
+#ifndef ANDROID
   rc = (*clone_entry) (fn, child_stack, flags, arg, parent_tidptr, newtls,
                        child_tidptr);
+#else
+  rc = (*clone_entry) (fn, child_stack, flags, arg);
+#endif
   if (rc < 0) {
     DPRINTF("clone rc=%d, errno=%d\n", rc, errno);
     lock_threads();
@@ -1470,6 +1511,7 @@ static void setup_clone_entry (void)
   clone_entry = mtcp_get_libc_symbol ("__clone");
 #else
   clone_entry = mtcp_get_libc_symbol ("__pthread_clone");
+  sys_clone_entry = mtcp_get_libc_symbol ("__sys_clone");
 #endif
   mtcp_sigaction_entry = mtcp_get_libc_symbol ("sigaction");
 }
@@ -1959,6 +2001,7 @@ static void *checkpointhread (void *dummy)
           mtcp_sys_kernel_gettid(), ckpthread->virtual_tid);
 #endif
 
+
   if (originalstartup)
     originalstartup = 0;
   else {
@@ -2350,7 +2393,11 @@ static int open_ckpt_to_write_hbict(int fd, int pipe_fds[2], char *hbict_path,
 
 static int open_ckpt_to_write_gz(int fd, int pipe_fds[2], char *gzip_path)
 {
+#ifndef ANDROID
   char *gzip_args[] = { "gzip", "-1", "-", NULL };
+#else
+  char *gzip_args[] = { "gzip", NULL };
+#endif
   gzip_args[0] = gzip_path;
   DPRINTF("open_ckpt_to_write_gz\n");
 
@@ -2603,6 +2650,7 @@ int perform_open_ckpt_image_fd(int *use_compression, int *fdCkptFileOnDisk)
 #endif
     } else if (use_gzip_compression) {/* fork a gzip process */
       *use_compression = 1;
+
       fd = open_ckpt_to_write_gz(fd, pipe_fds, gzip_path);
       if (pipe_fds[0] == -1) {
         /* If open_ckpt_to_write_gz() failed to fork the gzip process */
@@ -2771,6 +2819,10 @@ void write_ckpt_to_file(int fd, int tmpDMTCPHeaderFd, int fdCkptFileOnDisk)
   remap_nscd_areas_array[9].flags = END_OF_NSCD_AREAS;
 
   int mapsfd = mtcp_sys_open2 ("/proc/self/maps", O_RDONLY);
+#ifdef ANDROID
+  Area prop_area;
+  prop_area.addr = 0;
+#endif
 
   while (mtcp_readmapsline (mapsfd, &area)) {
     VA area_begin = area.addr;
@@ -2929,6 +2981,14 @@ void write_ckpt_to_file(int fd, int tmpDMTCPHeaderFd, int fdCkptFileOnDisk)
      * at the beginning.
      */
 
+#ifdef ANDROID
+    /* Android specify hack for /dev/__property__,
+     * make it always last load since it's need get fresh
+     * environment variable */
+    if (strstr (area.name, "/dev/__properties__")) {
+      memcpy(&prop_area, &area, sizeof (Area));
+    } else
+#endif
     if (area_begin < restore_begin) {
       if (area_end <= restore_begin) {
         // the whole thing is before the restore image
@@ -2962,6 +3022,10 @@ void write_ckpt_to_file(int fd, int tmpDMTCPHeaderFd, int fdCkptFileOnDisk)
       writememoryarea (fd, &area, stack_was_seen, vsyscall_exists);
     }
   }
+#ifdef ANDROID
+  if (prop_area.addr != 0)
+    writememoryarea (fd, &prop_area, stack_was_seen, vsyscall_exists);
+#endif
 
   /* It's now safe to do this, since we're done using mtcp_readmapsline() */
   remap_nscd_areas(remap_nscd_areas_array, num_remap_nscd_areas);
@@ -3617,10 +3681,11 @@ static void wait_for_all_restored (void)
 
 {
   int rip;
-
+  int i;
   // dec number of threads cloned but have not completed longjmp/getcontext
   do {
     rip = mtcp_state_value(&restoreinprog);
+    DPRINTF("wait ... rip = %d %d\n", rip, restoreinprog);
   } while (!mtcp_state_set (&restoreinprog, rip - 1, rip));
 
   if (-- rip == 1) {
@@ -3874,6 +3939,7 @@ static void save_tls_state (Thread *thisthread)
     mtcp_abort ();
   }
 #endif
+  DPRINTF("Store tls for %d %d", thisthread->tid, __get_tls());
 }
 
 static char *memsubarray (char *array, char *subarray, int len) {
@@ -3926,11 +3992,6 @@ static void *mtcp_get_tls_base_addr(void)
     mtcp_abort ();
   }
   return (void *)(*(unsigned long *)&(gdtentrytls.base_addr));
-}
-#else /* Android */
-static void *mtcp_get_tls_base_addr(void)
-{
-  return __get_tls();
 }
 #endif
 
@@ -4324,6 +4385,7 @@ static void finishrestore (void)
 
   ///JA: v54b port
   // so restarthread will have a big stack
+#ifndef ANDROID
 #if defined(__i386__) || defined(__x86_64__)
   asm volatile (CLEAN_FOR_64_BIT(mov %0,%%esp)
 		: : "g" (motherofall->JMPBUF_SP - 128) //-128 for red zone
@@ -4335,6 +4397,7 @@ static void finishrestore (void)
 #else
 # error "assembly instruction not translated"
 #endif
+#endif
   restarthread (motherofall);
 }
 
@@ -4344,7 +4407,7 @@ static int restarthread (void *threadv)
   Thread *child;
   Thread *const thread = threadv;
   struct MtcpRestartThreadArg mtcpRestartThreadArg;
-
+  DPRINTF("!!!--- restarthread ---!!! %d\n", thread->tid);
   restore_tls_state (thread);
 
   if (thread == motherofall) {
@@ -4380,9 +4443,10 @@ static int restarthread (void *threadv)
   for (child = thread -> children; child != NULL; child = child -> siblings) {
 
     /* Increment number of threads created but haven't completed their longjmp */
-
+    DPRINTF("let's born children! %d %d\n", mtcp_state_value(&restoreinprog), restoreinprog);
     do rip = mtcp_state_value(&restoreinprog);
     while (!mtcp_state_set (&restoreinprog, rip + 1, rip));
+    DPRINTF("let's born children! %d...tid = %d,%d\n", mtcp_state_value(&restoreinprog), child->tid, restoreinprog);
 
     ///JA: v54b port
     errno = -1;
@@ -4418,14 +4482,28 @@ static int restarthread (void *threadv)
                                clone_arg, child -> parent_tidptr, NULL,
                                child -> actual_tidptr);
 #else
-    pid_t tid = syscall(__NR_clone, restarthread,
-                    (void*)(child -> JMPBUF_SP - 128), // -128 for red zone
-                    ((child -> clone_flags & ~CLONE_SETTLS) |
-                     CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID),
-                    clone_arg, child -> parent_tidptr, NULL,
-                    child -> actual_tidptr);
-#endif
+    MTCP_PRINTF("restarthread %d, %x\n", restarthread, child->savctx.uc_mcontext.eip);
 
+    {
+      pthread_mutex_t * start_mutex;
+      start_mutex = (pthread_mutex_t *)(child -> JMPBUF_SP - 128);
+      pthread_mutex_init(start_mutex, NULL);
+      MTCP_PRINTF("lock thread\n");
+    }
+
+
+    pid_t tid = __pthread_clone_r(restarthread,
+                               // -128 for red zone
+                               (void*)(child -> JMPBUF_SP - 128),
+                               //child ->tls,
+                               (child -> clone_flags & ~CLONE_SETTLS),
+                               clone_arg);
+/*
+    pid_t tid = (*sys_clone_entry)(restarthread,(void*)(child -> JMPBUF_SP - 128),
+                                   (child -> clone_flags & ~CLONE_SETTLS),
+                                   clone_arg, NULL);
+*/
+#endif
     if (tid < 0) {
       MTCP_PRINTF("error %d recreating thread\n", errno);
       MTCP_PRINTF("clone_flags %X, savedsp %p\n",
@@ -4479,9 +4557,10 @@ static void restore_tls_state (Thread *thisthread)
   /* The assumption that this points to the pid was checked by that tls_pid crap
    * near the beginning
    */
-
+#ifndef ANDROID
   *(pid_t *)(*(unsigned long *)&(thisthread -> gdtentrytls[0].base_addr)
              + TLS_PID_OFFSET()) = motherpid;
+#endif
 
   /* Likewise, we must jam the new pid into the mother thread's tid slot
    * (checked by tls_tid carpola)
@@ -4532,6 +4611,7 @@ static void restore_tls_state (Thread *thisthread)
 #endif
 
   thisthread -> tid = mtcp_sys_kernel_gettid ();
+  DPRINTF("Restore tls for %d %d", thisthread->tid, __get_tls());
 }
 
 /*****************************************************************************
