@@ -742,6 +742,93 @@ static void adjust_for_smaller_file_size(Area *area, int fd)
   }
 }
 
+#ifdef ANDROID
+struct prop_area {
+  unsigned volatile count;
+  unsigned volatile serial;
+  unsigned magic;
+  unsigned version;
+  unsigned reserved[4];
+  unsigned toc[1];
+};
+
+static char *mtcp_sys_strchr(const char *s, int c) {
+  for (; *s != (char)'\0'; s++)
+    if (*s == (char)c)
+      return (char *)s;
+  return NULL;
+}
+
+const char* mtcp_getenv(const char* name)
+{
+  int i;
+  extern char **environ;
+  ssize_t len = mtcp_strlen(name);
+
+  if (environ == NULL)
+    return NULL;
+
+  for (i = 0; environ[i] != NULL; i++) {
+    if (mtcp_strstartswith(environ[i], name)) {
+      if (mtcp_strlen(environ[i]) > len && environ[i][len] == '=') {
+        if (environ[i][len+1] == '\0') return NULL;
+        return &(environ[i][len+1]);
+      }
+    }
+  }
+  return NULL;
+}
+
+void mtcp_readfile_dummy(int fd, size_t size)
+{
+  ssize_t rc;
+  size_t ar = 0;
+  int tries = 0;
+  char buf[1];
+  while(ar != size) {
+    rc = mtcp_sys_read(fd, buf, 1);
+    ar++;
+  }
+}
+
+static void restore_property(Area* area, int flags)
+{
+  struct prop_area *pa;
+  int s, fd;
+  unsigned sz;
+  char *env;
+  DPRINTF("try to get system property...\n");
+  env = mtcp_getenv("ANDROID_PROPERTY_WORKSPACE");
+  if (!env) {
+    MTCP_PRINTF("ANDROID_PROPERTY_WORKSPACE not defined!\n");
+    mtcp_abort();
+  }
+
+  fd = mtcp_atoi(env);
+  env = mtcp_sys_strchr(env, ',');
+  if (!env) {
+    MTCP_PRINTF("can't get system property from popen...\n");
+    mtcp_abort();
+  }
+  sz = mtcp_atoi(env + 1);
+  DPRINTF("Get system property fd=%d sz=%d\n", fd, sz);
+
+  if (sz != area->size) {
+    MTCP_PRINTF("warning the property area size is changed!\n"
+                "%d vs %d", sz, area->size);
+  }
+
+  pa = mmap(area->addr, sz, PROT_READ, MAP_SHARED, fd, 0);
+
+  if(pa == MAP_FAILED) {
+    MTCP_PRINTF("system property restore failed...\n");
+    mtcp_abort();
+  }
+  mtcp_readcs (mtcp_restore_cpfd, CS_AREACONTENTS);
+  mtcp_readfile_dummy(mtcp_restore_cpfd, area->size);
+}
+#endif
+
 /*
  * CASE NOT MAP_ANONYMOUS, MAP_SHARED :
  *
@@ -770,6 +857,13 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
   int areaContentsAlreadyRead = 0;
   int imagefd, rc;
   char *area_name = area->name; /* Modified in fix_filename_if_new_cwd below. */
+
+#ifdef ANDROID
+  if (mtcp_strstr(area->name, "/dev/__properties__")) {
+    restore_property(area, flags);
+    return;
+  }
+#endif
 
   if (!(area->prot & MAP_SHARED)) {
     MTCP_PRINTF("Illegal function call\n");
