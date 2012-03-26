@@ -236,6 +236,7 @@ void* JAllocDispatcher::allocate(size_t n) {
   return retVal;
 }
 void JAllocDispatcher::deallocate(void* ptr, size_t n){
+  if (ptr == NULL || n == 0) return;
   lock();
   if(n <= lvl1::N) lvl1::deallocate(ptr); else
   if(n <= lvl2::N) lvl2::deallocate(ptr); else
