@@ -1197,8 +1197,13 @@ Thread *mtcp_prepare_for_clone (int (*fn) (void *arg), void *child_stack,
   return thread;
 }
 
+#ifndef ANDROID
 int __clone (int (*fn) (void *arg), void *child_stack, int flags, void *arg,
 	     int *parent_tidptr, struct user_desc *newtls, int *child_tidptr)
+#else
+int __pthread_clone (int (*fn) (void *arg), void *child_stack, int flags, void *arg,
+	     int *parent_tidptr, struct user_desc *newtls, int *child_tidptr)
+#endif
 {
   int rc;
   Thread *thread;
@@ -1269,9 +1274,6 @@ void mtcp_process_pthread_join (pthread_t pth)
 #if defined(__i386__) || defined(__x86_64__)
 #ifndef ANDROID
 asm (".global clone ; .type clone,@function ; clone = __clone");
-#else /* ANDOIRD */
-asm (".global __pthread_clone ; .type __pthread_clone,@function ;"
-     " __pthread_clone = __clone");
 #endif
 #elif defined(__arm__)
 // In arm, '@' is a comment character;  Arm uses '%' in type directive
@@ -1423,7 +1425,7 @@ static void setupthread (Thread *thread)
   thread -> tid = mtcp_sys_kernel_gettid ();
   thread -> virtual_tid = GETTID ();
 
-  DPRINTF("thread %p -> tid %d\n", thread, thread->tid);
+  DPRINTF("thread %p -> tid %d  %x\n", thread, thread->tid, thread);
 
   lock_threads ();
 
@@ -4482,15 +4484,6 @@ static int restarthread (void *threadv)
                                clone_arg, child -> parent_tidptr, NULL,
                                child -> actual_tidptr);
 #else
-    MTCP_PRINTF("restarthread %d, %x\n", restarthread, child->savctx.uc_mcontext.eip);
-
-    {
-      pthread_mutex_t * start_mutex;
-      start_mutex = (pthread_mutex_t *)(child -> JMPBUF_SP - 128);
-      pthread_mutex_init(start_mutex, NULL);
-      MTCP_PRINTF("lock thread\n");
-    }
-
 
     pid_t tid = __pthread_clone_r(restarthread,
                                // -128 for red zone

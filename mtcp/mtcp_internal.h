@@ -44,6 +44,10 @@
 #include <sys/resource.h>
 #include <linux/version.h>
 #include <linux/limits.h>
+#ifdef ANDROID
+#define LOG_TAG "MTCP"
+#include <cutils/log.h>
+#endif
 
 #if USE_FUTEX
 # ifndef __user
@@ -74,7 +78,12 @@ extern pid_t mtcp_saved_pid;
   }
 
 #ifdef DEBUG
+#ifndef ANDROID
 # define DPRINTF(args...) MTCP_PRINTF(args)
+#else
+//# define DPRINTF(args...) LOGE(args)
+# define DPRINTF(args...) MTCP_PRINTF(args)
+#endif
 #else
 # define DPRINTF(args...) // debug printing
 #endif
@@ -213,7 +222,7 @@ typedef unsigned int mtcp_segreg_t;
  */
 #define MTCP_PROT_ZERO_PAGE (PROT_EXEC << 1)
 
-#define STACKSIZE 1024      // size of temporary stack (in quadwords)
+#define STACKSIZE 2048      // size of temporary stack (in quadwords)
 //#define MTCP_MAX_PATH 256   // maximum path length for mtcp_find_executable
 
 typedef struct Area Area;
