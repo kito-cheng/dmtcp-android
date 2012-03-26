@@ -49,7 +49,6 @@ static MtcpState printflocked = MTCP_STATE_INITIALIZER;
 
 static void rwrite (char const *buff, int size);
 
-__attribute__ ((visibility ("hidden")))
 void mtcp_printf (char const *format, ...)
 {
   char const *p, *q;

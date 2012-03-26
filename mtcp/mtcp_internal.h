@@ -456,7 +456,6 @@ const char* mtcp_getenv(const char* name);
 int mtcp_readmapsline (int mapsfd, Area *area);
 __attribute__ ((visibility ("hidden")))
 void mtcp_restoreverything (void);
-__attribute__ ((visibility ("hidden")))
 void mtcp_printf (char const *format, ...);
 void mtcp_maybebpt (void);
 __attribute__ ((visibility ("hidden")))

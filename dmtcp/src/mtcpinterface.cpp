@@ -158,6 +158,8 @@ static void initializeMtcpFuncPtrs()
     (mtcp_set_callbacks_t) get_mtcp_symbol("mtcp_set_callbacks");
   mtcpFuncPtrs.set_dmtcp_callbacks =
     (mtcp_set_dmtcp_callbacks_t) get_mtcp_symbol("mtcp_set_dmtcp_callbacks");
+  mtcpFuncPtrs.printf =
+    (mtcp_printf_t) get_mtcp_symbol("mtcp_printf");
   mtcpFuncPtrs.prepare_for_clone =
     (mtcp_prepare_for_clone_t) get_mtcp_symbol("mtcp_prepare_for_clone");
   mtcpFuncPtrs.thread_start =

@@ -73,6 +73,7 @@ extern "C"
   typedef int  (*mtcp_clone_t)(int (*)(void*), void*, int, void*, int*,
                                struct user_desc*, int*);
   typedef void (*mtcp_process_pthread_join_t)(pthread_t);
+  typedef void (*mtcp_printf_t)(char const *format, ...);
   typedef void *(*mtcp_prepare_for_clone_t)(int (*fn) (void *arg),
                                             void *child_stack, int *flags,
                                             void *arg, int *parent_tidptr,
@@ -92,6 +93,7 @@ extern "C"
     mtcp_kill_ckpthread_t       kill_ckpthread;
     mtcp_fill_in_pthread_id_t   fill_in_pthread_id;
     mtcp_process_pthread_join_t process_pthread_join;
+    mtcp_printf_t               printf;
     mtcp_prepare_for_clone_t    prepare_for_clone;
     mtcp_thread_start_t         thread_start;
     mtcp_thread_return_t        thread_return;
