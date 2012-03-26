@@ -30,7 +30,9 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/ipc.h>
+#ifndef ANDROID
 #include <sys/shm.h>
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -173,8 +175,13 @@ extern "C" void *mremap(void *old_address, size_t old_size,
   return retval;
 }
 # else
+#ifndef ANDROID
 extern "C" void *mremap(void *old_address, size_t old_size,
                         size_t new_size, int flags)
+#else
+extern "C" void *mremap(void *old_address, size_t old_size,
+                        size_t new_size, long unsigned flags)
+#endif
 {
   WRAPPER_EXECUTION_DISABLE_CKPT();
   void *retval = _real_mremap(old_address, old_size, new_size, flags);

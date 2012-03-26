@@ -27,7 +27,9 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/ipc.h>
+#ifndef ANDROID
 #include <sys/shm.h>
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -44,7 +46,9 @@
 #include "connectionmanager.h"
 #include "syscallwrappers.h"
 #include "util.h"
+#ifndef ANDROID
 #include "sysvipc.h"
+#endif
 #include  "../jalib/jassert.h"
 #include  "../jalib/jconvert.h"
 
@@ -232,6 +236,7 @@ int dlclose(void *handle)
   return ret;
 }
 
+#ifndef ANDROID
 extern "C"
 int shmget(key_t key, size_t size, int shmflg)
 {
@@ -289,8 +294,14 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
   WRAPPER_EXECUTION_ENABLE_CKPT();
   return ret;
 }
+#endif // ANDROID
 
+#ifndef ANDROID
 extern "C" int __clone ( int ( *fn ) ( void *arg ), void *child_stack, int flags, void *arg, int *parent_tidptr, struct user_desc *newtls, int *child_tidptr );
+#else
+extern "C" int __sys_clone ( int ( *fn ) ( void *arg ), void *child_stack, int flags, void *arg, int *parent_tidptr, struct user_desc *newtls, int *child_tidptr );
+#endif
+
 
 #define SYSCALL_VA_START()                                              \
   va_list ap;                                                           \
@@ -344,7 +355,11 @@ extern "C" int __clone ( int ( *fn ) ( void *arg ), void *child_stack, int flags
  * XXX: DO NOT USE JTRACE/JNOTE/JASSERT in this function; even better, do not
  *      use any STL here.  (--Kapil)
  */
+#ifndef ANDROID
 extern "C" long int syscall(long int sys_num, ... )
+#else
+extern "C" int syscall(int sys_num, ... )
+#endif
 {
   long int ret;
   va_list ap;
@@ -358,7 +373,11 @@ extern "C" long int syscall(long int sys_num, ... )
       typedef int (*fnc) (void*);
       SYSCALL_GET_ARGS_7(fnc, fn, void*, child_stack, int, flags, void*, arg,
                          pid_t*, pid, struct user_desc*, tls, pid_t*, ctid);
+#ifndef ANDROID
       ret = __clone(fn, child_stack, flags, arg, pid, tls, ctid);
+#else
+      ret = __sys_clone(fn, child_stack, flags, arg, pid, tls, ctid);
+#endif
       break;
     }
 
@@ -405,6 +424,7 @@ extern "C" long int syscall(long int sys_num, ... )
       ret = sigprocmask(how, set, oldset);
       break;
     }
+#ifndef ANDROID
     case SYS_rt_sigtimedwait:
     {
       SYSCALL_GET_ARGS_3(const sigset_t*,set,siginfo_t*,info,
@@ -412,6 +432,7 @@ extern "C" long int syscall(long int sys_num, ... )
       ret = sigtimedwait(set, info, timeout);
       break;
     }
+#endif
 
 #ifdef __i386__
     case SYS_sigaction:

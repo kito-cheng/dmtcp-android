@@ -73,7 +73,11 @@
 //// DEFINE REAL VERSIONS OF NEEDED FUNCTIONS (based on syscallsreal.cpp)
 //// (Define only functions needed for dmtcp_checkpoint, dmtcp_restart, etc.
 
+#ifndef ANDROID
 static pthread_mutex_t theMutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+#else
+static pthread_mutex_t theMutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+#endif
 
 #define REAL_FUNC_PASSTHROUGH(name) return name
 
@@ -274,9 +278,11 @@ int   _real_setpgid(pid_t pid, pid_t pgid) {
   REAL_FUNC_PASSTHROUGH ( setpgid ) ( pid, pgid );
 }
 
+#ifndef ANDROID
 pid_t _real_getsid(pid_t pid) {
   REAL_FUNC_PASSTHROUGH_PID_T ( getsid ) ( pid );
 }
+#endif
 
 pid_t _real_setsid(void) {
   REAL_FUNC_PASSTHROUGH_PID_T ( setsid ) ( );
@@ -336,7 +342,11 @@ int _real_munmap(void *addr, size_t length) {
 
 
 // Needed for _real_gettid, etc.
+#ifndef ANDROID
 long int _real_syscall(long int sys_num, ... ) {
+#else
+int _real_syscall(int sys_num, ... ) {
+#endif
   int i;
   void * arg[7];
   va_list ap;
@@ -404,6 +414,7 @@ FILE * _real_fopen( const char *path, const char *mode ) {
   REAL_FUNC_PASSTHROUGH_TYPED ( FILE *, fopen ) ( path, mode );
 }
 
+#ifndef ANDROID
 FILE * _real_fopen64( const char *path, const char *mode ) {
   REAL_FUNC_PASSTHROUGH_TYPED ( FILE *, fopen64 ) ( path, mode );
 }
@@ -423,6 +434,7 @@ int _real_shmdt (const void *shmaddr) {
 int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf) {
   REAL_FUNC_PASSTHROUGH ( shmctl ) (shmid, cmd, buf);
 }
+#endif
 
 LIB_PRIVATE
 int _real_poll(struct pollfd *fds, nfds_t nfds, int timeout) {

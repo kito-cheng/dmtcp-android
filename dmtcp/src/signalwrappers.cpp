@@ -32,6 +32,10 @@
 #define EXTERNC extern "C"
 #endif
 
+#ifdef ANDROID
+#define sigmask(x) ((x) & 0xffffffff)
+#endif
+
 //gah!!! signals API is redundant
 
 static bool checkpointSignalBlockedForProcess = false;
@@ -72,8 +76,13 @@ static inline sigset_t patchPOSIXMask(const sigset_t* mask){
   return t;
 }
 
+#ifndef ANDROID
 static inline void patchPOSIXUserMaskWork(int how, const sigset_t *set, sigset_t *oldset,
                                           bool checkpointSignalBlocked)
+#else
+static inline void patchPOSIXUserMaskWork(int how, sigset_t *set, sigset_t *oldset,
+                                          bool checkpointSignalBlocked)
+#endif
 {
   if (oldset != NULL) {
     if (checkpointSignalBlocked == true) {
@@ -94,20 +103,32 @@ static inline void patchPOSIXUserMaskWork(int how, const sigset_t *set, sigset_t
   }
 }
 
+#ifndef ANDROID
 static inline void patchPOSIXUserMask(int how, const sigset_t *set, sigset_t *oldset)
+#else
+static inline void patchPOSIXUserMask(int how, sigset_t *set, sigset_t *oldset)
+#endif
 {
   patchPOSIXUserMaskWork(how, set, oldset, checkpointSignalBlockedForProcess);
 }
 
 /* Multi-threaded version of the above function */
+#ifndef ANDROID
 static inline void patchPOSIXUserMaskMT(int how, const sigset_t *set, sigset_t *oldset)
+#else
+static inline void patchPOSIXUserMaskMT(int how, sigset_t *set, sigset_t *oldset)
+#endif
 {
   patchPOSIXUserMaskWork(how, set, oldset, checkpointSignalBlockedForThread);
 }
 
 
 //set the handler
+#ifndef ANDROID
 EXTERNC sighandler_t signal(int signum, sighandler_t handler)
+#else
+EXTERNC sighandler_t bsd_signal(int signum, sighandler_t handler)
+#endif
 {
   if(signum == bannedSignalNumber()){
     return SIG_IGN;
@@ -132,12 +153,14 @@ EXTERNC int rt_sigaction(int signum, const struct sigaction *act, struct sigacti
   //}
   //return _real_rt_sigaction( signum, act, oldact);
 }
+#ifndef ANDROID
 EXTERNC int sigvec(int signum, const struct sigvec *vec, struct sigvec *ovec){
   if(signum == bannedSignalNumber()){
     vec = NULL;
   }
   return _real_sigvec( signum, vec, ovec );
 }
+#endif
 
 //set the mask
 EXTERNC int sigblock(int mask){
@@ -165,7 +188,11 @@ EXTERNC int siggetmask(void){
 }
 
 EXTERNC int sigprocmask(int how, const sigset_t *set, sigset_t *oldset){
+#ifndef ANDROID
   const sigset_t *orig = set;
+#else
+  sigset_t *orig = const_cast<sigset_t *>(set);
+#endif
   if (set != NULL) {
     sigset_t tmp = patchPOSIXMask(set);
     set = &tmp;
@@ -262,7 +289,11 @@ EXTERNC int sigpause(int sig)
  * __thread to make them thread local.
  */
 EXTERNC int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldmask){
+#ifndef ANDROID
   const sigset_t *orig = set;
+#else
+  sigset_t *orig = const_cast<sigset_t *>(set);
+#endif
   if (set != NULL) {
     sigset_t tmp = patchPOSIXMask(set);
     set = &tmp;

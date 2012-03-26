@@ -40,7 +40,9 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 #include <string.h>
 
 #define BINARY_NAME "dmtcp_checkpoint"
@@ -341,7 +343,12 @@ int main ( int argc, char** argv )
 
   //set up CHECKPOINT_DIR
   if(getenv(ENV_VAR_CHECKPOINT_DIR) == NULL){
+#ifndef ANDROID
     const char* ckptDir = get_current_dir_name();
+#else
+    char path_buffer[PATH_MAX];
+    const char* ckptDir = getcwd(path_buffer, PATH_MAX);
+#endif
     if(ckptDir != NULL ){
       //copy to private buffer
       static dmtcp::string _buf = ckptDir;

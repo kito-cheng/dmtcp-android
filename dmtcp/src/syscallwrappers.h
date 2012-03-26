@@ -443,6 +443,9 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int _real_eventfd(int initval, int flags);
   int _real_signalfd (int fd, const sigset_t *mask, int flags);
 
+#ifdef ANDROID
+#define __WAIT_STATUS int*
+#endif
   int   _real_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
   pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options,
                     struct rusage *rusage);

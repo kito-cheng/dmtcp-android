@@ -256,6 +256,7 @@ void RestoreTarget::bringToForeground(SlidingFdTable& slidingFd)
     // XXX: Where is the controlling terminal being set?
     char *ptr =  ttyname(sin);
     int fd = open(ptr,O_RDWR);
+#ifndef ANDROID
     if (ctermid(controllingTerm)) {
       int tfd = open(ptr,O_RDONLY);
       if (tfd >= 0) {
@@ -268,6 +269,7 @@ void RestoreTarget::bringToForeground(SlidingFdTable& slidingFd)
           .Text("Cannot restore controlling terminal");
       }
     }
+#endif
     if (fd >= 0) close(fd);
   }
 
@@ -334,7 +336,11 @@ void RestoreTarget::CreateProcess(DmtcpCoordinatorAPI& coordinatorAPI,
   Util::initializeLogFile(procname());
   JTRACE("Creating process during restart") (upid()) (procname());
 
+#ifndef ANDROID
   JTRACE("")(getpid())(getppid())(getsid(0));
+#else
+  JTRACE("")(getpid())(getppid());
+#endif
   ProcessInfo &pInfo = _processInfo;
   pid_t psid = pInfo.sid();
 

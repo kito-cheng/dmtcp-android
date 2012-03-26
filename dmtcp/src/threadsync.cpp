@@ -90,12 +90,21 @@ static bool _checkpointThreadInitialized = false;
 static int preResumeThreadCount = INVALID_USER_THREAD_COUNT;
 static pthread_mutex_t preResumeThreadCountLock = PTHREAD_MUTEX_INITIALIZER;
 
+#ifndef ANDROID
 static __thread int _wrapperExecutionLockLockCount = 0;
 static __thread int _threadCreationLockLockCount = 0;
 static __thread bool _threadPerformingDlopenDlsym = false;
 static __thread bool _sendCkptSignalOnFinalUnlock = false;
 static __thread bool _isOkToGrabWrapperExecutionLock = true;
 static __thread bool _hasThreadFinishedInitialization = false;
+#else
+static int _wrapperExecutionLockLockCount = 0;
+static int _threadCreationLockLockCount = 0;
+static bool _threadPerformingDlopenDlsym = false;
+static bool _sendCkptSignalOnFinalUnlock = false;
+static bool _isOkToGrabWrapperExecutionLock = true;
+static bool _hasThreadFinishedInitialization = false;
+#endif
 
 
 void dmtcp::ThreadSync::initMotherOfAll()

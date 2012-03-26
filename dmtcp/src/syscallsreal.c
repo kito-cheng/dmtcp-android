@@ -46,14 +46,6 @@
 #include <ctype.h>
 #include <assert.h>
 
-#ifdef ANDROID
-#define SYS_getpid  __NR_getpid
-#define SYS_getppid __NR_getppid
-#define SYS_gettid  __NR_gettid
-#define SYS_tkill   __NR_tkill
-#define SYS_tgkill  __NR_tgkill
-#endif
-
 typedef int ( *funcptr_t ) ();
 typedef pid_t ( *funcptr_pid_t ) ();
 typedef funcptr_t ( *signal_funcptr_t ) ();
@@ -213,6 +205,13 @@ static void *_real_func_addr[numLibcWrappers];
 static int _libc_wrappers_initialized = 0;
 static int _libpthread_wrappers_initialized = 0;
 
+#ifdef ANDROID
+void *__helper_dlopen();
+void *__helper_dlerror();
+void *__helper_dlsym();
+void *__helper_dlclose();
+#endif
+
 #define GET_FUNC_ADDR(name) \
   _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, #name);
 
@@ -231,7 +230,15 @@ void initialize_libc_wrappers()
   }
 
   if (!_libc_wrappers_initialized) {
+#ifdef ANDROID
+#undef open64
+#endif
     FOREACH_DMTCP_WRAPPER(GET_FUNC_ADDR);
+#ifdef ANDROID
+    _real_func_addr[ENUM(dlopen)] = __helper_dlopen();
+    _real_func_addr[ENUM(dlclose)] = __helper_dlclose();
+    _real_func_addr[ENUM(__clone)] = _real_dlsym(RTLD_NEXT, "__pthread_clone");
+#endif
     _libc_wrappers_initialized = 1;
   }
 }
@@ -304,6 +311,9 @@ LIB_PRIVATE
 void *_dmtcp_get_libc_dlsym_addr()
 {
   static dlsym_fnptr_t _libc_dlsym_fnptr = NULL;
+#ifdef ANDROID
+  _libc_dlsym_fnptr = __helper_dlsym();
+#endif
 
   if (_libc_dlsym_fnptr == NULL) {
     long dlsym_offset = 0;

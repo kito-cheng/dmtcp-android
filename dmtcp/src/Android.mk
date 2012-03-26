@@ -11,7 +11,7 @@ LOCAL_SRC_FILES:=  connectionstate.cpp \
         nodetable.cpp protectedfds.cpp \
         sockettable.cpp syslogwrappers.cpp \
         uniquepid.cpp \
-        dmtcpcoordinatorapi.cpp virtualpidtable.cpp \
+        dmtcpcoordinatorapi.cpp \
         util_exec.cpp util_gen.cpp util_init.cpp \
         jalibinterface.cpp processinfo.cpp \
         ckptserializer.cpp resource_manager.cpp
