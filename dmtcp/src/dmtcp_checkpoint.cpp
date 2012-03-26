@@ -449,6 +449,9 @@ int main ( int argc, char** argv )
 #endif
 
   preloadLibs += jalib::Filesystem::FindHelperUtility ( "dmtcphijack.so" );
+#ifdef ANDROID
+  preloadLibs = preloadLibs + ":" + "libhijack_pthread";
+#endif
 
 #ifdef PID_VIRTUALIZATION
   preloadLibs += ":";
