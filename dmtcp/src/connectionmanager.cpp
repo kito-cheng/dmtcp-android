@@ -179,7 +179,9 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
                        device.compare("/dev/tty")) != 0;
   bool isEpoll = (device.compare("anon_inode:[eventpoll]")==0);
   bool isEventFd = (device.compare("anon_inode:[eventfd]")==0);
+#ifndef ANDROID
   bool isSignalFd = (device.compare("anon_inode:[signalfd]")==0);
+#endif /* ANDROID */
 #ifdef IBV
   bool isInfinibandDevice   = Util::strStartsWith(device, "/dev/infiniband/");
   bool isInfinibandConnection   = Util::strStartsWith(device, "infinibandevent:");
@@ -389,6 +391,7 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
           return deviceName;
       }
   }
+#ifndef ANDROID
   else if (isSignalFd) {
       dmtcp::string deviceName = "signalfd["+jalib::XToString(fd)+"]:"+device;
       if (noOnDemandConnection)
@@ -406,6 +409,7 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
           return deviceName;
       }
   }
+#endif /* ANDROID */
   else if (isEpoll) {
       dmtcp::string deviceName = "epoll["+jalib::XToString(fd)+"]:"+device;
       if (noOnDemandConnection)
@@ -601,9 +605,11 @@ void dmtcp::ConnectionList::serialize ( jalib::JBinarySerializer& o )
       case Connection::EVENTFD:
         con = new EventFdConnection(0, 0); //dummy val
         break;
+#ifndef ANDROID
       case Connection::SIGNALFD:
         con = new SignalFdConnection(0, NULL, 0); //dummy val
         break;
+#endif /* ANDROID */
       default:
         JASSERT ( false ) ( key ) ( o.filename() ).Text ( "unknown connection type" );
       }

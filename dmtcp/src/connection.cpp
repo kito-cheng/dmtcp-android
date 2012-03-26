@@ -2182,6 +2182,7 @@ void dmtcp::EventFdConnection::serializeSubClass ( jalib::JBinarySerializer& o )
   JTRACE("Serializing EvenFdConn.") ;
 }
 
+#ifndef ANDROID
 void dmtcp::SignalFdConnection::preCheckpoint ( const dmtcp::vector<int>& fds
     , KernelBufferDrainer& drain )
 {
@@ -2264,3 +2265,4 @@ void dmtcp::SignalFdConnection::serializeSubClass ( jalib::JBinarySerializer& o 
   o &  _flags & _mask & _fdsi & _has_lock;
   JTRACE("Serializing SignalFdConn.") ;
 }
+#endif /* ANDROID */

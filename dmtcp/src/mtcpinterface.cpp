@@ -52,7 +52,8 @@ static int debugEnabled = 0;
 #endif
 
 #ifdef PID_VIRTUALIZATION
-static int pidVirtualizationEnabled = 1;
+//static int pidVirtualizationEnabled = 1;
+static int pidVirtualizationEnabled = 0;
 #else
 static int pidVirtualizationEnabled = 0;
 #endif
@@ -87,7 +88,11 @@ static bool delayedCheckpoint = false;
 
 static void* find_and_open_mtcp_so()
 {
+#ifndef ANDROID
   dmtcp::string mtcpso = jalib::Filesystem::FindHelperUtility ( "libmtcp.so.1" );
+#else
+  dmtcp::string mtcpso = jalib::Filesystem::FindHelperUtility ( "libmtcp.so" );
+#endif
   void* handle = dlopen ( mtcpso.c_str(), RTLD_NOW );
   JASSERT ( handle != NULL ) ( mtcpso ) (dlerror())
     .Text ( "failed to load libmtcp.so" );
@@ -136,7 +141,11 @@ static void initializeMtcpFuncPtrs()
   mtcpFuncPtrs.ok = (mtcp_ok_t) get_mtcp_symbol("mtcp_ok");
   mtcpFuncPtrs.threadiszombie =
     (mtcp_threadiszombie) get_mtcp_symbol("mtcp_threadiszombie");
+#ifndef ANDROID
   mtcpFuncPtrs.clone = (mtcp_clone_t) get_mtcp_symbol("__clone");
+#else
+  mtcpFuncPtrs.clone = (mtcp_clone_t) get_mtcp_symbol("__pthread_clone");
+#endif
   mtcpFuncPtrs.fill_in_pthread_id =
     (mtcp_fill_in_pthread_id_t) get_mtcp_symbol("mtcp_fill_in_pthread_id");
   mtcpFuncPtrs.kill_ckpthread =

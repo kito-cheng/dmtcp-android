@@ -232,6 +232,7 @@
 #define SYS_setgid          __NR_setgid
 #define SYS_setuid          __NR_setuid
 #define SYS_epoll_create    __NR_epoll_create
+#define SYS_poll            __NR_poll
 #endif
 
 #endif

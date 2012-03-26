@@ -46,7 +46,7 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#ifdef HAVE_EPOLL_H
+#ifdef HAVE_SYS_EPOLL_H
 # include <sys/epoll.h>
 #else
   /* KEEP THIS IN SYNC WITH syscallwrappers.h */
@@ -585,6 +585,7 @@ namespace dmtcp
       int evtfd;
   };
 
+#ifndef ANDROID
   class SignalFdConnection: public Connection
   {
     public:
@@ -620,6 +621,7 @@ namespace dmtcp
       struct signalfd_siginfo _fdsi;
       bool _has_lock;
   };
+#endif /* ANDROID */
 }
 
 #endif

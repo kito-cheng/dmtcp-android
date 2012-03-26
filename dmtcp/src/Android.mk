@@ -14,7 +14,7 @@ LOCAL_SRC_FILES:=  connectionstate.cpp \
         dmtcpcoordinatorapi.cpp \
         util_exec.cpp util_gen.cpp util_init.cpp \
         jalibinterface.cpp processinfo.cpp \
-        ckptserializer.cpp resource_manager.cpp
+        ckptserializer.cpp resource_manager.cpp \
 
 # sysvipc.cpp
 
@@ -49,11 +49,11 @@ LOCAL_SRC_FILES := dmtcpawareapi.cpp \
         dmtcpcoordinatorapi.cpp execwrappers.cpp \
         mtcpinterface.cpp signalwrappers.cpp \
         socketwrappers.cpp workerhijack.cpp \
-        epollwrappers.cpp \
-        threadwrappers.cpp pidwrappers.cpp \
+        threadwrappers.cpp \
         miscwrappers.cpp remexecwrappers.cpp \
         glibcsystem.cpp filewrappers.cpp \
-        mallocwrappers.cpp dmtcpmodule.cpp \
+        mallocwrappers.cpp \
+        dmtcpplugin.cpp \
 
 # Define ANDROID_SMP appropriately.
 ifeq ($(TARGET_CPU_SMP),true)
