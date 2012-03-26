@@ -45,8 +45,13 @@
 
 // This macro (LIBC...) is also defined in ../jalib/jassert.cpp and should
 // always be kept in sync with that.
+#ifndef ANDROID
 #define LIBC_FILENAME "libc.so.6"
 #define LIBPTHREAD_FILENAME "libpthread.so.0"
+#else
+#define LIBC_FILENAME "libc.so"
+#define LIBPTHREAD_FILENAME "libc.so"
+#endif
 
 #define MTCP_FILENAME "libmtcp.so"
 #define CKPT_FILE_PREFIX "ckpt_"
@@ -194,5 +199,39 @@
 #define DMTCP_BANNER                                                            \
   DMTCP_VERSION_AND_COPYRIGHT_INFO                                              \
   "(Use flag \"-q\" to hide this message.)\n\n"
+
+#ifdef ANDROID
+#define SYS_getpid  __NR_getpid
+#define SYS_getppid __NR_getppid
+#define SYS_gettid  __NR_gettid
+#define SYS_tkill   __NR_tkill
+#define SYS_tgkill  __NR_tgkill
+#define SYS_brk  __NR_brk
+#define SYS_clone           __NR_clone
+#define SYS_execve          __NR_execve
+#define SYS_fork            __NR_fork
+#define SYS_exit            __NR_exit
+#define SYS_open            __NR_open
+#define SYS_close           __NR_close
+#define SYS_rt_sigaction    __NR_rt_sigaction
+#define SYS_rt_sigprocmask  __NR_rt_sigprocmask
+#define SYS_rt_sigtimedwait __NR_rt_sigtimedwait
+#define SYS_sigaction       __NR_sigaction
+#define SYS_signal          __NR_signal
+#define SYS_sigprocmask     __NR_sigprocmask
+#define SYS_pipe            __NR_pipe
+#define SYS_getpgrp         __NR_getpgrp
+#define SYS_getpgid         __NR_getpgid
+#define SYS_setpgid         __NR_setpgid
+#define SYS_getsid          __NR_getsid
+#define SYS_setsid          __NR_setsid
+#define SYS_kill            __NR_kill
+#define SYS_waitid          __NR_waitid
+#define SYS_wait4           __NR_wait4
+#define SYS_waitpid         __NR_waitpid
+#define SYS_setgid          __NR_setgid
+#define SYS_setuid          __NR_setuid
+#define SYS_epoll_create    __NR_epoll_create
+#endif
 
 #endif
