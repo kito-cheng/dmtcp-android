@@ -609,6 +609,10 @@ void dmtcp::ConnectionList::serialize ( jalib::JBinarySerializer& o )
       case Connection::SIGNALFD:
         con = new SignalFdConnection(0, NULL, 0); //dummy val
         break;
+#else
+      case Connection::SPECIAL_DEV:
+        con = new SpecialDevConnection();
+        break;
 #endif /* ANDROID */
       default:
         JASSERT ( false ) ( key ) ( o.filename() ).Text ( "unknown connection type" );
@@ -658,6 +662,29 @@ void dmtcp::KernelDeviceToConnection::handlePreExistingFd ( int fd )
   //so if it doesn't exist it must be a socket
   if ( _table.find ( device ) == _table.end() )
   {
+#ifdef ANDROID
+    if (strstr(device.c_str(), "/dev/log/"))
+    {
+      dmtcp::string _path =
+        jalib::Filesystem::ResolveSymlink ( _procFDPath ( fd ) );
+      JTRACE ( "Found pre-existing /dev/log/main" );
+      // Don't worry, just skip it
+      SpecialDevConnection *con =
+        new SpecialDevConnection ( _path, SpecialDevConnection::LOG_DEV );
+      create ( fd, con );
+    }
+    else if (strstr(device.c_str(), "/dev/__properties__"))
+    {
+      dmtcp::string _path =
+        jalib::Filesystem::ResolveSymlink ( _procFDPath ( fd ) );
+      JTRACE ( "Found pre-existing /dev/__properties__" );
+      // Don't worry, just skip it
+      SpecialDevConnection *con =
+        new SpecialDevConnection ( _path, SpecialDevConnection::PROPERTY_DEV );
+      create ( fd, con );
+    }
+    else
+#endif
     if ( Util::strStartsWith(device, "file"))
     {
       device = KernelDeviceToConnection::instance().fdToDevice (fd);

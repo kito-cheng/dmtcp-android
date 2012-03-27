@@ -104,7 +104,12 @@ namespace dmtcp
         EPOLL   = 0x7000,
         EVENTFD = 0x8000,
         SIGNALFD = 0x9000,
+#ifndef ANDROID
         TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | EPOLL | EVENTFD | SIGNALFD
+#else
+        SPECIAL_DEV = 0xa000,
+        TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | EPOLL | EVENTFD | SIGNALFD | SPECIAL_DEV
+#endif
       };
 
       virtual ~Connection() {}
@@ -502,7 +507,6 @@ namespace dmtcp
       vector<char> _in_data;
       int ckptfd;
   };
-
   class EpollConnection: public Connection
   {
     public:
@@ -622,6 +626,49 @@ namespace dmtcp
       bool _has_lock;
   };
 #endif /* ANDROID */
+
+#ifdef ANDROID
+  class SpecialDevConnection : public Connection
+  {
+    public:
+      enum DevType
+      {
+         LOG_DEV,
+         PROPERTY_DEV,
+         INVALID_DEV
+      };
+
+      SpecialDevConnection( const dmtcp::string& path, enum DevType type )
+          : Connection ( SPECIAL_DEV )
+          , _dev_type(type)
+      {
+        JTRACE("creating special dev connection")((int)type);
+      }
+
+      SpecialDevConnection()
+          : Connection ( SPECIAL_DEV )
+      {
+        _dev_type = INVALID_DEV;
+      };
+
+      virtual void preCheckpoint ( const dmtcp::vector<int>& fds
+                                   , KernelBufferDrainer& drain );
+      virtual void postCheckpoint ( const dmtcp::vector<int>& fds,
+                                    bool isRestart = false);
+      virtual void restore ( const dmtcp::vector<int>&, ConnectionRewirer* );
+      virtual void restoreOptions ( const dmtcp::vector<int>& fds );
+
+      virtual void serializeSubClass ( jalib::JBinarySerializer& o );
+
+      virtual void mergeWith ( const Connection& that );
+
+      virtual void restartDup2(int oldFd, int newFd);
+
+    private:
+      dmtcp::string _path;
+      DevType _dev_type;
+  };
+#endif
 }
 
 #endif

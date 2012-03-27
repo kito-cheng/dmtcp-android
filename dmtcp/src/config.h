@@ -6,6 +6,7 @@
 
 /* Verbose debug output and log files in $DMTCP_TMPDIR */
 /* #undef DEBUG */
+#define DEBUG
 
 /* Always enable this. */
 #define DMTCP /**/

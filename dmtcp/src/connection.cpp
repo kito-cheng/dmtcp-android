@@ -1997,7 +1997,6 @@ void dmtcp::StdioConnection::restartDup2(int oldFd, int newFd){
   restore(dmtcp::vector<int>(1, newFd));
 }
 
-
 void dmtcp::EpollConnection::preCheckpoint ( const dmtcp::vector<int>& fds
     , KernelBufferDrainer& drain )
 {
@@ -2266,3 +2265,59 @@ void dmtcp::SignalFdConnection::serializeSubClass ( jalib::JBinarySerializer& o 
   JTRACE("Serializing SignalFdConn.") ;
 }
 #endif /* ANDROID */
+
+#ifdef ANDROID
+
+
+////////////
+///// SPECIAL DEV CHECKPOINTING
+
+void dmtcp::SpecialDevConnection::preCheckpoint ( const dmtcp::vector<int>& fds, KernelBufferDrainer& drain ){
+  //JTRACE ("Checkpointing stdio") (fds[0]) (id());
+}
+void dmtcp::SpecialDevConnection::postCheckpoint ( const dmtcp::vector<int>& fds , bool isRestart ) {
+    restoreOptions ( fds );
+  //nothing
+}
+
+void dmtcp::SpecialDevConnection::restore(const dmtcp::vector<int>& fds, dmtcp::ConnectionRewirer*) {
+  for(size_t i=0; i<fds.size(); ++i){
+    int fd = fds[i];
+    int tmpFd = -1;
+    switch(_dev_type){
+      case LOG_DEV:
+        JTRACE("Restoring LOG_DEV")(fd);
+        tmpFd= open(_path.c_str(), _fcntlFlags);
+        break;
+      case PROPERTY_DEV:
+        JTRACE("Restoring PROPERTY_DEV (do nothing)")(fd);
+        return;
+      default:
+        JASSERT(false);
+    }
+    errno = 0;
+    JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
+    close (tmpFd);
+  }
+}
+void dmtcp::SpecialDevConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
+  Connection::restoreOptions ( fds );
+  //nothing
+}
+
+void dmtcp::SpecialDevConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
+  JSERIALIZE_ASSERT_POINT ( "dmtcp::SpecialDevConnection" );
+  //JTRACE("Serializing STDIO") (id());
+  o & _path & _dev_type;
+}
+
+void dmtcp::SpecialDevConnection::mergeWith ( const Connection& that ){
+  //Connection::mergeWith(that);
+}
+
+void dmtcp::SpecialDevConnection::restartDup2(int oldFd, int newFd){
+  static ConnectionRewirer ignored;
+  restore(dmtcp::vector<int>(1,newFd), &ignored);
+}
+
+#endif

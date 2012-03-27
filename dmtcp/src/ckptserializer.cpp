@@ -109,7 +109,11 @@ static int open_ckpt_to_read(const char *filename)
     const char *decomp_path;
     const char **decomp_args;
     const char *gzip_path = "gzip";
+#ifndef ANDROID
     static const char * gzip_args[] = { "gzip", "-d", "-", NULL };
+#else
+    static const char * gzip_args[] = { "gzip", "-d", NULL };
+#endif
 #ifdef HBICT_DELTACOMP
     const char *hbict_path = "hbict";
     static const char *hbict_args[] = { "hbict", "-r", NULL };
