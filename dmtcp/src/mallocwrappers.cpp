@@ -135,6 +135,8 @@ extern "C" void *mmap(void *addr, size_t length, int prot, int flags,
 {
   WRAPPER_EXECUTION_DISABLE_CKPT();
   void *retval = _real_mmap(addr, length, prot, flags, fd, offset);
+  dmtcp::MmapManager::instance().handleMmap(retval, length, prot,
+                                            flags, fd, offset);
   WRAPPER_EXECUTION_ENABLE_CKPT();
   return retval;
 }
@@ -144,6 +146,8 @@ extern "C" void *mmap64 (void *addr, size_t length, int prot, int flags,
 {
   WRAPPER_EXECUTION_DISABLE_CKPT();
   void *retval = _real_mmap64(addr, length, prot, flags, fd, offset);
+  dmtcp::MmapManager::instance().handleMmap64(retval, length, prot,
+                                              flags, fd, offset);
   WRAPPER_EXECUTION_ENABLE_CKPT();
   return retval;
 }
@@ -152,6 +156,7 @@ extern "C" int munmap(void *addr, size_t length)
 {
   WRAPPER_EXECUTION_DISABLE_CKPT();
   int retval = _real_munmap(addr, length);
+  dmtcp::MmapManager::instance().handleMunmap(addr, length);
   WRAPPER_EXECUTION_ENABLE_CKPT();
   return retval;
 }

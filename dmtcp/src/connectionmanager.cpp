@@ -933,3 +933,38 @@ bool dmtcp::PtsToSymlink::exists( dmtcp::string device )
   return true;
 }
 */
+
+dmtcp::MmapManager &dmtcp::MmapManager::instance()
+{
+  static MmapManager inst; return inst;
+}
+
+void dmtcp::MmapManager::handleMmap(void *addr, size_t length,
+                                    int prot, int flags,
+                                    int fd, off_t offset)
+{
+  if (fd == -1) return;
+  dmtcp::Connection& con =
+    dmtcp::KernelDeviceToConnection::instance().retrieve( fd );
+  con.mmap(addr, length, prot, flags, offset);
+}
+
+void dmtcp::MmapManager::handleMmap64(void *addr, size_t length,
+                                      int prot, int flags,
+                                      int fd, off64_t offset)
+{
+  if (fd == -1) return;
+  dmtcp::Connection& con =
+    dmtcp::KernelDeviceToConnection::instance().retrieve( fd );
+  con.mmap64(addr, length, prot, flags, offset);
+}
+
+void dmtcp::MmapManager::handleMunmap(void *addr, size_t length)
+{
+  iterator itr = _addrToFd.find(addr);
+  if (itr != _addrToFd.end()) {
+    dmtcp::Connection& con =
+      dmtcp::KernelDeviceToConnection::instance().retrieve( itr->second );
+    con.munmap(addr, length);
+  }
+}

@@ -209,6 +209,19 @@ namespace dmtcp
       dmtcp::map< dmtcp::string, ConnectionIdentifier > _table;
   };
 
+  class MmapManager
+  {
+    public:
+      static MmapManager& instance();
+      void handleMmap(void *addr, size_t length, int prot, int flags,
+                      int fd, off_t offset);
+      void handleMmap64(void *addr, size_t length, int prot, int flags,
+                        int fd, off64_t offset);
+      void handleMunmap(void *addr, size_t length);
+      typedef dmtcp::map< void*, int >::iterator iterator;
+    private:
+      dmtcp::map< void*, int > _addrToFd;
+  };
 }
 
 #endif

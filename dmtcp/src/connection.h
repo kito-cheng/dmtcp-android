@@ -147,6 +147,13 @@ namespace dmtcp
       virtual string str() { return "<Not-a-File>"; };
 
       void serialize ( jalib::JBinarySerializer& o );
+
+      virtual void ioctl(int request, ...);
+      virtual void mmap(void *addr, size_t len, int prot,
+                        int flags, off_t off);
+      virtual void mmap64(void *addr, size_t len, int prot,
+                          int flags, off64_t off);
+      virtual void munmap(void *addr, size_t len);
     protected:
       virtual void serializeSubClass ( jalib::JBinarySerializer& o ) = 0;
     protected:

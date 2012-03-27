@@ -222,6 +222,28 @@ void dmtcp::Connection::doLocking ( const dmtcp::vector<int>& fds )
     ( fds[0] ) ( JASSERT_ERRNO );
 }
 
+void dmtcp::Connection::ioctl (int request, ...)
+{
+  JTRACE ("ioctl") ( id() ) ( request );
+}
+
+void dmtcp::Connection::mmap64 (void *addr, size_t len, int prot,
+                               int flags, off64_t off)
+{
+  JTRACE ("mmap64") ( id() ) ( addr ) ( len ) (prot) ( flags ) ( off );
+}
+
+void dmtcp::Connection::mmap (void *addr, size_t len, int prot,
+                              int flags, off_t off)
+{
+  JTRACE ("mmap") ( id() ) ( addr ) ( len ) (prot) ( flags ) ( off );
+}
+
+void dmtcp::Connection::munmap (void *addr, size_t len)
+{
+  JTRACE ("munmap") ( id() ) ( addr ) ( len );
+}
+
 /////////////////////////
 ////// TCP UPDATE COMMANDS
 
