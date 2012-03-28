@@ -19,7 +19,7 @@ ifeq ($(TARGET_CPU_SMP),true)
 else
     LOCAL_CFLAGS += -DANDROID_SMP=0
 endif
-LOCAL_CFLAGS+= $(MTCP_LOCAL_CFLAGS) -fno-pic -DDEBUG -DTIMING -g3 -O0
+LOCAL_CFLAGS+= $(MTCP_LOCAL_CFLAGS) -DDEBUG -DTIMING -g3 -O0 -fno-pic
 LOCAL_LDFLAGS:= -T $(LOCAL_PATH)/mtcp.t -Wl,-Map,$(LOCAL_PATH)/mtcp.map
 LOCAL_MODULE := libmtcp
 LOCAL_SHARED_LIBRARIES := libhijack_pthread libc libdl
@@ -37,7 +37,10 @@ else
 endif
 LOCAL_C_INCLUDES := bionic/libc/private/ \
                     bionic/libc/bionic/
-LOCAL_SRC_FILES:= bionic_pthread_hj.c
+LOCAL_SRC_FILES:= bionic_pthread_hj.c \
+                  bionic_pthread-rwlocks.c \
+                  bionic_pthread-timers.c \
+                  bionic_pthread-atfork.c
 LOCAL_MODULE := libhijack_pthread
 LOCAL_SHARED_LIBRARIES := libdl
 LOCAL_MODULE_TAGS := optional
