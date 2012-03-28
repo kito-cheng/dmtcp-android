@@ -108,7 +108,8 @@ namespace dmtcp
         TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | EPOLL | EVENTFD | SIGNALFD
 #else
         SPECIAL_DEV = 0xa000,
-        TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | EPOLL | EVENTFD | SIGNALFD | SPECIAL_DEV
+        ASHMEM  = 0xb000,
+        TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | SPECIAL_DEV | ASHMEM
 #endif
       };
 
@@ -674,6 +675,57 @@ namespace dmtcp
     private:
       dmtcp::string _path;
       DevType _dev_type;
+  };
+
+  class AshmemConnection : public Connection
+  {
+    public:
+      AshmemConnection( )
+          : Connection ( ASHMEM )
+          , _name()
+          , _addr(NULL)
+          , _size(0)
+          , _data()
+          , _mmap_len(0)
+          , _mmap_prot(0)
+          , _mmap_flags(0)
+          , _mmap_off(0)
+      {
+        JTRACE("creating ashmem dev connection");
+      }
+
+      virtual void preCheckpoint ( const dmtcp::vector<int>& fds
+                                   , KernelBufferDrainer& drain );
+      virtual void postCheckpoint ( const dmtcp::vector<int>& fds,
+                                    bool isRestart = false);
+      virtual void restore ( const dmtcp::vector<int>&, ConnectionRewirer* );
+      virtual void restoreOptions ( const dmtcp::vector<int>& fds );
+
+      virtual void serializeSubClass ( jalib::JBinarySerializer& o );
+
+      virtual void mergeWith ( const Connection& that );
+
+      virtual void restartDup2(int oldFd, int newFd);
+
+      virtual void ioctl(int request, ...);
+
+      virtual void mmap(void *addr, size_t len, int prot,
+                        int flags, off_t off);
+
+      virtual void mmap64(void *addr, size_t len, int prot,
+                          int flags, off64_t off);
+
+      virtual void munmap(void *addr, size_t len);
+
+    private:
+      dmtcp::string _name;
+      void *_addr;
+      size_t _size;
+      vector<char> _data;
+      size_t _mmap_len;
+      int _mmap_prot;
+      int _mmap_flags;
+      off_t _mmap_off;
   };
 #endif
 }

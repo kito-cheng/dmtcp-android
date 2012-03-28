@@ -181,6 +181,8 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
   bool isEventFd = (device.compare("anon_inode:[eventfd]")==0);
 #ifndef ANDROID
   bool isSignalFd = (device.compare("anon_inode:[signalfd]")==0);
+#else
+  bool isAshmem = Util::strStartsWith(device, "/dev/ashmem");
 #endif /* ANDROID */
 #ifdef IBV
   bool isInfinibandDevice   = Util::strStartsWith(device, "/dev/infiniband/");
@@ -302,6 +304,24 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
 
     return deviceName;
 
+#ifdef ANDROID
+  } else if ( isAshmem ) {
+    dmtcp::string deviceName = "ashmem[" + jalib::XToString(fd) + "]:" + device;
+
+    if(noOnDemandConnection)
+      return deviceName;
+
+    iterator i = _table.find ( deviceName );
+    if ( i == _table.end() )
+    {
+      JTRACE ( "creating Android ashmem connection [on-demand]" );
+
+      Connection * c = new AshmemConnection ();
+      ConnectionList::instance().add ( c );
+      _table[deviceName] = c->id();
+    }
+    return deviceName;
+#endif
   } else if ( isFile ) {
     // Can be file or FIFO channel
     struct stat buf;
@@ -613,7 +633,10 @@ void dmtcp::ConnectionList::serialize ( jalib::JBinarySerializer& o )
       case Connection::SPECIAL_DEV:
         con = new SpecialDevConnection();
         break;
-#endif /* ANDROID */
+      case Connection::ASHMEM:
+        con = new AshmemConnection();
+        break;
+#endif
       default:
         JASSERT ( false ) ( key ) ( o.filename() ).Text ( "unknown connection type" );
       }
@@ -682,6 +705,11 @@ void dmtcp::KernelDeviceToConnection::handlePreExistingFd ( int fd )
       SpecialDevConnection *con =
         new SpecialDevConnection ( _path, SpecialDevConnection::PROPERTY_DEV );
       create ( fd, con );
+    }
+    else if (strstr(device.c_str(), "/dev/ashmem"))
+    {
+      JTRACE ( "Found pre-existing /dev/ashmem ?" );
+      JASSERT(false).Text("should not be found pre-existing /dev/ashmem!"); 
     }
     else
 #endif

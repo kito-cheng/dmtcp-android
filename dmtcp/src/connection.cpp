@@ -46,6 +46,9 @@
 #include <fstream>
 #include <linux/limits.h>
 #include <arpa/inet.h>
+#ifdef ANDROID
+#include <linux/ashmem.h>
+#endif
 
 static bool ptmxTestPacketMode(int masterFd);
 static ssize_t ptmxReadAll(int fd, const void *origBuf, size_t maxCount);
@@ -2319,7 +2322,8 @@ void dmtcp::SpecialDevConnection::restore(const dmtcp::vector<int>& fds, dmtcp::
     }
     errno = 0;
     JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
-    close (tmpFd);
+    if (tmpFd != fd)
+      close (tmpFd);
   }
 }
 void dmtcp::SpecialDevConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
@@ -2341,4 +2345,128 @@ void dmtcp::SpecialDevConnection::restartDup2(int oldFd, int newFd){
   restore(dmtcp::vector<int>(1,newFd), &ignored);
 }
 
+////////////
+///// ASHMEM DEV CHECKPOINTING
+
+void dmtcp::AshmemConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
+                                              KernelBufferDrainer& drain ){
+  JTRACE ("Checkpointing ashmem") (fds[0]) (id()) (_addr) (_size);
+  if (_addr) {
+    _data.resize(_size);
+    std::copy((char *)_addr, (char *)_addr+_size, _data.begin());
+    _real_munmap(_addr, _mmap_len);
+  }
+}
+
+void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
+                                               bool isRestart ) {
+  if (isRestart)
+    restoreOptions ( fds );
+  JTRACE ("Restoring ashmem content") (fds[0]) (id()) (_addr) (_size);
+  //nothing
+  JASSERT( fds.size() == 1 );
+  if (_addr) {
+    KernelDeviceToConnection::instance().dbgSpamFds();
+    void * _new_addr = _real_mmap(_addr, _mmap_len, _mmap_prot,
+                                  _mmap_flags, fds[0], _mmap_off);
+    JASSERT (_new_addr == _addr) (_new_addr) (_addr)
+            (_mmap_len) (_mmap_prot) (_mmap_flags) (_mmap_off);
+    std::copy(_data.begin(), _data.end(), (char *)_addr);
+  }
+}
+void dmtcp::AshmemConnection::restore ( const dmtcp::vector<int>& fds,
+                                        ConnectionRewirer* ){
+  // nothing
+}
+
+void dmtcp::AshmemConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
+  JTRACE ("Restoring ashmem fd") (fds[0]) (id()) (_addr) (_size);
+  for(size_t i=0; i<fds.size(); ++i){
+    int fd = fds[i];
+    int tmpFd = -1;
+    tmpFd= _real_open("/dev/ashmem", O_RDWR);
+    char buf[ASHMEM_NAME_LEN];
+    strlcpy(buf, _name.c_str(), sizeof(buf));
+    _real_ioctl ( tmpFd, ASHMEM_SET_NAME, buf );
+
+    size_t size = _size;
+    _real_ioctl ( tmpFd, ASHMEM_SET_SIZE, size );
+    errno = 0;
+    JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
+    if (tmpFd != fd)
+      _real_close (tmpFd);
+  }
+  KernelDeviceToConnection::instance().dbgSpamFds();
+}
+
+void dmtcp::AshmemConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
+  JSERIALIZE_ASSERT_POINT ( "dmtcp::AshmemConnection" );
+  //JTRACE("Serializing STDIO") (id());
+  o & _name & _size & _addr;
+  o & _mmap_len & _mmap_prot;
+  o & _mmap_flags & _mmap_off;
+  o & _data;
+}
+
+void dmtcp::AshmemConnection::mergeWith ( const Connection& that ){
+  //Connection::mergeWith(that);
+}
+
+void dmtcp::AshmemConnection::restartDup2(int oldFd, int newFd) {
+  static ConnectionRewirer ignored;
+  restore(dmtcp::vector<int>(1,newFd), &ignored);
+}
+
+void dmtcp::AshmemConnection::ioctl(int request, ...) {
+  JTRACE ("Handle ioctl for ashmem") ( id() ) ( request ) (ASHMEM_SET_NAME) (ASHMEM_SET_SIZE);
+  va_list args;
+  va_start(args, request);
+  if (request == ASHMEM_SET_NAME) {
+    char *_new_name = va_arg(args, char*);
+    if (_new_name) {
+      _name = _new_name;
+    }
+    JTRACE ("set name for ashmem") ( id() ) (_name);
+  } else if (request == ASHMEM_SET_SIZE) {
+    size_t _new_size = va_arg(args, size_t);
+    _size = _new_size;
+    JTRACE ("set size for ashmem") ( id() ) (_size);
+  } else {
+    JTRACE ("Unhandle ioctl for ashmem!") ( id() ) ( request );
+  }
+  va_end(args);
+}
+
+void dmtcp::AshmemConnection::mmap(void *addr, size_t len, int prot,
+                                   int flags, off_t off) {
+  JTRACE ("handle mmap for ashmem") ( id() ) ( addr )
+         ( len ) (prot) ( flags ) ( off );
+  _addr = addr;
+  _mmap_len = len;
+  _mmap_prot = prot;
+  _mmap_flags = flags;
+  _mmap_off = off;
+}
+
+void dmtcp::AshmemConnection::mmap64(void *addr, size_t len, int prot,
+                                     int flags, off64_t off) {
+  JTRACE ("handle mmap64 for ashmem") ( id() ) ( addr )
+         ( len ) (prot) ( flags ) ( off );
+  _addr = addr;
+  _mmap_len = len;
+  _mmap_prot = prot;
+  _mmap_flags = flags;
+  _mmap_off = off;
+}
+
+void dmtcp::AshmemConnection::munmap(void *addr, size_t len) {
+  JTRACE ("handle munmap for ashmem") ( id() ) ( addr ) ( len );
+  JASSERT( addr == _addr );
+  JASSERT( len == _mmap_len );
+  _addr = 0;
+  _mmap_len = 0;
+  _mmap_prot = 0;
+  _mmap_flags = 0;
+  _mmap_off = 0;
+}
 #endif
