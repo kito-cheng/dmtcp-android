@@ -21,22 +21,23 @@
 #include <sysdep-i386.h>
 #define __NR_sigprocmask 126
 #define SIG_BLOCK 0
-#define oLINK 4 
-#define oSS_SP 8 
-#define oSS_SIZE 16 
-#define oGS 20 
-#define oFS 24 
-#define oEDI 36 
-#define oESI 40 
-#define oEBP 44 
-#define oESP 48 
-#define oEBX 52 
-#define oEDX 56 
-#define oECX 60 
-#define oEAX 64 
-#define oEIP 76 
-#define oFPREGS 96 
-#define oSIGMASK 108 
+#define oLINK 4
+#define oSS_SP 8
+#define oSS_SIZE 16
+#define oGS 20
+#define oFS 24
+#define oEDI 36
+#define oESI 40
+#define oEBP 44
+#define oESP 48
+#define oEBX 52
+#define oEDX 56
+#define oECX 60
+#define oEAX 64
+#define oEIP 76
+#define oFPREGSMEM 112
+#define oFPREGS 96
+#define oSIGMASK 108
     .text
     .type getcontext, @function
     .globl getcontext
@@ -70,6 +71,7 @@ getcontext:
 	/* We have separate floating-point register content memory on the
 	   stack.  We use the __fpregs_mem block in the context.  Set the
 	   links up correctly.  */
+	leal    oFPREGSMEM(%eax), %ecx
 	movl	%ecx, oFPREGS(%eax)
 	/* Save the floating-point context.  */
 	fnstenv	(%ecx)
