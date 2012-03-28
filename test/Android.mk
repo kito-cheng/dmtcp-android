@@ -9,6 +9,13 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp-fp.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_MODULE := dmtcp-fp
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
 LOCAL_SRC_FILES := dmtcp1.c
 LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
 LOCAL_MODULE := dmtcp1
@@ -49,5 +56,44 @@ LOCAL_SRC_FILES := dmtcpaware1.c
 LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
 LOCAL_SHARED_LIBRARIES := libdmtcpaware
 LOCAL_MODULE := dmtcpaware1
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_C_INCLUDES := external/dmtcp/dmtcp/src
+LOCAL_SRC_FILES := dmtcpaware2.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_SHARED_LIBRARIES := libdmtcpaware
+LOCAL_MODULE := dmtcpaware2
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_C_INCLUDES := external/dmtcp/dmtcp/src
+LOCAL_SRC_FILES := dmtcpaware3.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_SHARED_LIBRARIES := libdmtcpaware
+LOCAL_MODULE := dmtcpaware3
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := shared-memory.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_MODULE := dmtcp-shared-memory
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := shared-fd.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_MODULE := dmtcp-shared-fd
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := stale-fd.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_MODULE := dmtcp-stale-fd
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
