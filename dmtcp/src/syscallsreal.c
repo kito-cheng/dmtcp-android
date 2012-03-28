@@ -235,6 +235,7 @@ void initialize_libc_wrappers()
 #endif
     FOREACH_DMTCP_WRAPPER(GET_FUNC_ADDR);
 #ifdef ANDROID
+    _real_func_addr[ENUM(signal)] = _real_dlsym(RTLD_NEXT, "bsd_signal");
     _real_func_addr[ENUM(dlopen)] = __helper_dlopen();
     _real_func_addr[ENUM(dlclose)] = __helper_dlclose();
     _real_func_addr[ENUM(__clone)] = _real_dlsym(RTLD_NEXT, "__pthread_clone");
@@ -266,7 +267,9 @@ void initialize_libpthread_wrappers()
       abort();
     }
     FOREACH_LIBPTHREAD_WRAPPERS(GET_LIBPTHREAD_FUNC_ADDR);
+#ifndef ANDROID
     _real_dlclose(pthread_handle);
+#endif
 
     _libpthread_wrappers_initialized = 1;
   }
