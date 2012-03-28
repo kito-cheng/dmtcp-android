@@ -2323,7 +2323,6 @@ void dmtcp::SpecialDevConnection::restore(const dmtcp::vector<int>& fds, dmtcp::
   }
 }
 void dmtcp::SpecialDevConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
-  Connection::restoreOptions ( fds );
   //nothing
 }
 
