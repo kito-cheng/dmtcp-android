@@ -40,7 +40,10 @@ LOCAL_C_INCLUDES := bionic/libc/private/ \
 LOCAL_SRC_FILES:= bionic_pthread_hj.c \
                   bionic_pthread-rwlocks.c \
                   bionic_pthread-timers.c \
-                  bionic_pthread-atfork.c
+                  bionic_pthread-atfork.c \
+                  bionic_fork.c \
+                  bionic_pthread_clone-x86.S
+
 LOCAL_MODULE := libhijack_pthread
 LOCAL_SHARED_LIBRARIES := libdl
 LOCAL_MODULE_TAGS := optional
