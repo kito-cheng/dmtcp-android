@@ -2352,6 +2352,10 @@ void dmtcp::AshmemConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
                                               KernelBufferDrainer& drain ){
   JTRACE ("Checkpointing ashmem") (fds[0]) (id()) (_addr) (_size);
   if (_addr) {
+    {
+      dmtcp::vector<char> empty_vec;
+      _data.swap(empty_vec);
+    }
     _data.resize(_size);
     std::copy((char *)_addr, (char *)_addr+_size, _data.begin());
     _real_munmap(_addr, _mmap_len);
@@ -2369,8 +2373,14 @@ void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
     KernelDeviceToConnection::instance().dbgSpamFds();
     void * _new_addr = _real_mmap(_addr, _mmap_len, _mmap_prot,
                                   _mmap_flags, fds[0], _mmap_off);
-    JASSERT (_new_addr == _addr) (_new_addr) (_addr)
-            (_mmap_len) (_mmap_prot) (_mmap_flags) (_mmap_off);
+    void *_final_addr = _new_addr;
+    if (_new_addr != _addr) {
+      _final_addr = (void*)_real_syscall(__NR_mremap, _new_addr, _mmap_len,
+                                         _mmap_len, MREMAP_FIXED | MREMAP_MAYMOVE,
+                                         _addr);
+    }
+    JASSERT (_final_addr == _addr) (_new_addr) (_addr) (_final_addr)
+            (_mmap_len) (_mmap_prot) (_mmap_flags) (_mmap_off) (JASSERT_ERRNO);
     std::copy(_data.begin(), _data.end(), (char *)_addr);
   }
 }
@@ -2395,6 +2405,10 @@ void dmtcp::AshmemConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
     JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
     if (tmpFd != fd)
       _real_close (tmpFd);
+    if (_pinned) {
+      struct ashmem_pin pin = { 0, 0 };
+      _real_ioctl(fd, ASHMEM_PIN, &pin);
+    }
   }
   KernelDeviceToConnection::instance().dbgSpamFds();
 }
@@ -2405,7 +2419,7 @@ void dmtcp::AshmemConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
   o & _name & _size & _addr;
   o & _mmap_len & _mmap_prot;
   o & _mmap_flags & _mmap_off;
-  o & _data;
+  o & _data & _pinned;
 }
 
 void dmtcp::AshmemConnection::mergeWith ( const Connection& that ){
@@ -2431,6 +2445,12 @@ void dmtcp::AshmemConnection::ioctl(int request, ...) {
     size_t _new_size = va_arg(args, size_t);
     _size = _new_size;
     JTRACE ("set size for ashmem") ( id() ) (_size);
+  } else if (request == ASHMEM_SET_PROT_MASK) {
+    _mmap_prot = va_arg(args, int);
+  } else if (request == ASHMEM_PIN) {
+    _pinned = true;
+  } else if (request == ASHMEM_UNPIN) {
+    _pinned = false;
   } else {
     JTRACE ("Unhandle ioctl for ashmem!") ( id() ) ( request );
   }

@@ -57,17 +57,13 @@ struct Line { Line *next;
 
 static int readline (char *buff, int size);
 
-// #define USE_STATIC_MALLOC
-#ifdef USE_STATIC_MALLOC
-char mymemory[1000000];
 int end = 0;
-void * mymalloc(size_t x) {
-  int *result = &(mymemory[end]);
+void * mymalloc(size_t x, char *rawmem) {
+  int *result = &(rawmem[end]);
   end += x;
   if (x > 1000000) { printf("malloc:  ERROR\n"); exit(1); }
   return result;
 }
-#endif
 
 /* Compile with  -Wl,--export-dynamic to make these functions visible. */
 void mtcpHookPreCheckpoint() {
@@ -87,19 +83,17 @@ int main ()
   char buf [ 1024 * 1024 ] __attribute__ ((unused)); /* Try to uncover bugs. */
   Line *line, **lline, *lines;
 
-  int ashmem_fd = ashmem_create_region("test", 1024);
-  mmap(NULL, 1024, PROT_READ | PROT_WRITE, MAP_PRIVATE, ashmem_fd, 0);
+  int ashmem_fd = ashmem_create_region("test", 1024*1024);
+  void *mem = mmap(NULL, 1024*1024, PROT_READ | PROT_WRITE, MAP_PRIVATE, ashmem_fd, 0);
+  int ashmem_fd2 = ashmem_create_region("test2", 1024*1024);
+  void *mem2 = mmap(NULL, 1024*1024, PROT_READ | PROT_WRITE, MAP_PRIVATE, ashmem_fd2, 0);
   lines = NULL;
   lline = &lines;
   number = 0;
   while (1) {
     printline ("%6d> ", number + 1);
     //printline ("testmtcp.c: ABOUT TO malloc\n");fflush(stdout);
-#ifdef USE_STATIC_MALLOC
-    line = mymalloc (sizeof *line);
-#else
-    line = malloc (sizeof *line);
-#endif
+    line = mymalloc (sizeof *line, mem);
     //printline ("testmtcp.c: DID malloc\n");fflush(stdout);
     if (!readline (line -> buff, sizeof line -> buff)) break;
     *lline = line;

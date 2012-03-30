@@ -690,6 +690,7 @@ namespace dmtcp
           , _mmap_prot(0)
           , _mmap_flags(0)
           , _mmap_off(0)
+          , _pinned()
       {
         JTRACE("creating ashmem dev connection");
       }
@@ -721,11 +722,12 @@ namespace dmtcp
       dmtcp::string _name;
       void *_addr;
       size_t _size;
-      vector<char> _data;
+      dmtcp::vector<char> _data;
       size_t _mmap_len;
       int _mmap_prot;
       int _mmap_flags;
       off_t _mmap_off;
+      bool _pinned;
   };
 #endif
 }
