@@ -97,3 +97,11 @@ LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
 LOCAL_MODULE := dmtcp-stale-fd
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp-android-log.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_MODULE := dmtcp-android-log
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
