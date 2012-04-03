@@ -9,6 +9,14 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp-ashmem-2.cpp
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_MODULE := dmtcp-ashmem-2
+LOCAL_SHARED_LIBRARIES := libcutils
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
 LOCAL_SRC_FILES := dmtcp-fp.c
 LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
 LOCAL_MODULE := dmtcp-fp
@@ -103,5 +111,12 @@ LOCAL_SRC_FILES := dmtcp-android-log.c
 LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
 LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_MODULE := dmtcp-android-log
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := forkexec.c
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_MODULE := dmtcp-forkexec
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
