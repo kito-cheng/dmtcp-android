@@ -851,12 +851,13 @@ void mtcp_init (char const *checkpointfilename,
   }
 #else
   {
-    pid_t tls_tid;
+    pid_t tls_tid ;
     tls_tid = *(pid_t *) (((unsigned char*)mtcp_get_tls_base_addr()) + TLS_TID_OFFSET());
     if ((tls_tid != motherpid)) {
       MTCP_PRINTF("getpid %d, tls tid %d, must all match\n",
                   motherpid, tls_tid);
-      mtcp_abort ();
+      /* manual update in Android for workaround */
+      *(pid_t *) (((unsigned char*)mtcp_get_tls_base_addr()) + TLS_TID_OFFSET()) = motherpid;
     }
   }
 #endif
