@@ -1172,7 +1172,7 @@ Thread *mtcp_prepare_for_clone (int (*fn) (void *arg), void *child_stack,
 
     /* Save exactly what the caller is supplying */
 
-    thread -> clone_flags   = flags;
+    thread -> clone_flags   = *flags;
 #ifndef ANDROID
     thread -> parent_tidptr = parent_tidptr;
     thread -> given_tidptr  = child_tidptr;
