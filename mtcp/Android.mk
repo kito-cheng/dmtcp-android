@@ -36,7 +36,9 @@ else
     LOCAL_CFLAGS += -DANDROID_SMP=0
 endif
 LOCAL_C_INCLUDES := bionic/libc/private/ \
-                    bionic/libc/bionic/
+                    bionic/libc/bionic/ \
+                    external/dmtcp/dmtcp/src \
+
 LOCAL_SRC_FILES:= bionic_pthread_hj.c \
                   bionic_pthread-rwlocks.c \
                   bionic_pthread-timers.c \

@@ -50,6 +50,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <bionic_pthread.h>
+#include <constants.h>
 
 extern int  __pthread_clone(int (*fn)(void*), void *child_stack, int flags, void *arg);
 static int  (*__hijack__pthread_clone)(int (*fn)(void*), void *child_stack, int flags, void *arg) = NULL;
@@ -314,7 +315,8 @@ int pthread_create(pthread_t *thread_out, pthread_attr_t const * attr,
     pthread_internal_t * thread;
     int                  madestack = 0;
     int     old_errno = errno;
-    if (getenv("DMTCP_HIJACK_LIB") && 
+
+    if (getenv(ENV_VAR_HIJACK_LIBS) &&
         !hijack_handle) {
         hijack_handle =dlopen("dmtcphijack.so", 0);
     }
