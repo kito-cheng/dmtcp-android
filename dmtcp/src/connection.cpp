@@ -2432,7 +2432,7 @@ void dmtcp::AshmemConnection::restartDup2(int oldFd, int newFd) {
 }
 
 void dmtcp::AshmemConnection::ioctl(int request, ...) {
-  JTRACE ("Handle ioctl for ashmem") ( id() ) ( request ) (ASHMEM_SET_NAME) (ASHMEM_SET_SIZE);
+  JTRACE ("Handle ioctl for ashmem") ( id() ) ( request );
   va_list args;
   va_start(args, request);
   if (request == ASHMEM_SET_NAME) {
@@ -2449,8 +2449,10 @@ void dmtcp::AshmemConnection::ioctl(int request, ...) {
     _mmap_prot = va_arg(args, int);
   } else if (request == ASHMEM_PIN) {
     _pinned = true;
+    JTRACE ("set pinned for ashmem") ( id() ) (_size);
   } else if (request == ASHMEM_UNPIN) {
     _pinned = false;
+    JTRACE ("set unpinned for ashmem") ( id() ) (_size);
   } else {
     JTRACE ("Unhandle ioctl for ashmem!") ( id() ) ( request );
   }
