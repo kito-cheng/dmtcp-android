@@ -267,7 +267,11 @@ static void dmtcpPrepareForExec(const char *path, char *const argv[],
   dmtcp::Util::prepareDlsymWrapper();
   dmtcp::Util::setVirtualPidEnvVar(getpid(), getppid());
 
-  JTRACE ( "Prepared for Exec" ) ( getenv( "LD_PRELOAD" ) );
+  if (getenv( "LD_PRELOAD" )) {
+    JTRACE ( "Prepared for Exec" ) ( getenv( "LD_PRELOAD" ) );
+  } else {
+    JTRACE ( "Prepared for Exec" );
+  }
 }
 
 static void dmtcpProcessFailedExec(const char *path, char *newArgv[])

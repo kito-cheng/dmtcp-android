@@ -117,7 +117,11 @@ void restoreUserLDPRELOAD()
     char *userPreload = preload + strlen(hijackLibs) + 1;
     setenv("LD_PRELOAD", userPreload, 1);
   }
-  JTRACE("LD_PRELOAD") (preload) (hijackLibs) (getenv("LD_PRELOAD"));
+  if (getenv("LD_PRELOAD")) {
+    JTRACE("LD_PRELOAD") (preload) (hijackLibs) (getenv("LD_PRELOAD"));
+  } else {
+    JTRACE("LD_PRELOAD") (preload) (hijackLibs);
+  }
 }
 
 // FIXME:  We need a better way to get MTCP_DEFAULT_SIGNAL
