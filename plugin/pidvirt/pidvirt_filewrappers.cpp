@@ -33,7 +33,9 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 #include <linux/version.h>
 #include <string.h>
 
@@ -45,7 +47,14 @@
 #include "virtualpidtable.h"
 #include "dmtcpplugin.h"
 #include "pidvirt.h"
+#ifndef ANDROID
 #include "sysvipc.h"
+#endif
+
+#ifdef ANDROID
+#include <termios.h>
+#undef open64
+#endif
 
 // FIXME:  This function needs third argument newpathsize, or assume PATH_MAX
 // FIXME:  This does a lot of copying even if "/proc" doesn't appear.
@@ -270,8 +279,11 @@ extern "C" {
 int send_sigwinch = 0;
 }
 
-
+#ifndef ANDROID
 extern "C" int ioctl(int d,  unsigned long int request, ...)
+#else
+extern "C" int ioctl(int d, int request, ...)
+#endif
 {
   va_list ap;
   int retval;

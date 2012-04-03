@@ -49,7 +49,9 @@ struct user_desc {int dummy;}; /* <asm/ldt.h> is missing in Ubuntu 11.10 */
 #include <sys/procfs.h>
 #include <syslog.h>
 #include <sys/ipc.h>
+#ifndef ANDROID
 #include <sys/shm.h>
+#endif
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/epoll.h>
@@ -59,11 +61,17 @@ struct user_desc {int dummy;}; /* <asm/ldt.h> is missing in Ubuntu 11.10 */
 #include <grp.h>
 #include <netdb.h>
 
+#ifndef ANDROID
 #if __GLIBC_PREREQ(2,5)
 # define READLINK_RET_TYPE ssize_t
 #else
 # define READLINK_RET_TYPE int
 #endif
+#else
+# define READLINK_RET_TYPE int
+# define __WAIT_STATUS int*
+# define __THROW
+#endif /* ANDROID */
 
 #ifdef __cplusplus
 extern "C"
@@ -91,11 +99,13 @@ extern "C"
 
   long int _real_syscall(long int sys_num, ... );
 
+#ifndef ANDROID
   /* System V shared memory */
   int _real_shmget(key_t key, size_t size, int shmflg);
   void* _real_shmat(int shmid, const void *shmaddr, int shmflg);
   int _real_shmdt(const void *shmaddr);
   int _real_shmctl(int shmid, int cmd, struct shmid_ds *buf);
+#endif
 
   pid_t _real_getpid(void);
   pid_t _real_getppid(void);
@@ -127,8 +137,13 @@ extern "C"
   int _real_setgid(gid_t gid);
   int _real_setuid(uid_t uid);
 
+#ifndef ANDROID
   long _real_ptrace ( enum __ptrace_request request, pid_t pid, void *addr,
                     void *data);
+#else
+  long _real_ptrace ( int request, pid_t pid, void *addr,
+                    void *data);
+#endif
 
   int _real_pthread_exit (void *retval);
   int _real_fcntl(int fd, int cmd, void *arg);

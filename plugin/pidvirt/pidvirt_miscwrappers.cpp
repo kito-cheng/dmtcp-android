@@ -33,7 +33,9 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 #include <linux/version.h>
 #include <string.h>
 
@@ -191,6 +193,7 @@ extern "C" int __clone(int (*fn) (void *arg), void *child_stack, int flags,
   return virtualTid;
 }
 
+#ifndef ANDROID
 extern "C"
 int shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
@@ -203,7 +206,7 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
   DMTCP_PLUGIN_ENABLE_CKPT();
   return ret;
 }
-
+#endif
 
 extern "C" int __clone ( int ( *fn ) ( void *arg ), void *child_stack, int flags, void *arg, int *parent_tidptr, struct user_desc *newtls, int *child_tidptr );
 
@@ -259,7 +262,11 @@ extern "C" int __clone ( int ( *fn ) ( void *arg ), void *child_stack, int flags
  * XXX: DO NOT USE JTRACE/JNOTE/JASSERT in this function; even better, do not
  *      use any STL here.  (--Kapil)
  */
+#ifndef ANDROID
 extern "C" long int syscall(long int sys_num, ... )
+#else
+extern "C" int syscall(int sys_num, ... )
+#endif
 {
   long int ret;
   va_list ap;
@@ -315,12 +322,14 @@ extern "C" long int syscall(long int sys_num, ... )
       break;
     }
 
+#ifndef ANDROID
     case SYS_getsid:
     {
       SYSCALL_GET_ARG(pid_t,pid);
       ret = getsid(pid);
       break;
     }
+#endif
     case SYS_setsid:
     {
       ret = setsid();

@@ -191,8 +191,13 @@ int _real_setuid(uid_t uid) {
 }
 
 LIB_PRIVATE
+#ifndef ANDROID
 long _real_ptrace(enum __ptrace_request request, pid_t pid, void *addr,
                   void *data) {
+#else
+long _real_ptrace(int request, pid_t pid, void *addr,
+                  void *data) {
+#endif
   REAL_FUNC_PASSTHROUGH_TYPED ( long, ptrace ) ( request, pid, addr, data );
 }
 
@@ -248,6 +253,7 @@ int _real_clone ( int ( *function ) (void *), void *child_stack, int flags, void
                                       parent_tidptr, newtls, child_tidptr );
 }
 
+#ifndef ANDROID
 LIB_PRIVATE
 int _real_shmget (key_t key, size_t size, int shmflg) {
   REAL_FUNC_PASSTHROUGH ( shmget ) (key, size, shmflg);
@@ -267,6 +273,7 @@ LIB_PRIVATE
 int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf) {
   REAL_FUNC_PASSTHROUGH ( shmctl ) (shmid, cmd, buf);
 }
+#endif
 
 LIB_PRIVATE
 int _real_pthread_exit (void *retval) {
