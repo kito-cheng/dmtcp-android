@@ -238,7 +238,8 @@ void initialize_libc_wrappers()
     _real_func_addr[ENUM(signal)] = _real_dlsym(RTLD_NEXT, "bsd_signal");
     _real_func_addr[ENUM(dlopen)] = __helper_dlopen();
     _real_func_addr[ENUM(dlclose)] = __helper_dlclose();
-    _real_func_addr[ENUM(__clone)] = _real_dlsym(RTLD_NEXT, "__pthread_clone");
+    void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
+    _real_func_addr[ENUM(__clone)] = _real_dlsym(pthread_handle, "__pthread_clone");
 #endif
     _libc_wrappers_initialized = 1;
   }
@@ -1018,6 +1019,7 @@ LIB_PRIVATE
 int _real_signalfd (int fd, const sigset_t *mask, int flags) {
   REAL_FUNC_PASSTHROUGH (signalfd) (fd, mask, flags);
 }
+
 LIB_PRIVATE
 int _real_ioctl(int d, unsigned long int request, ...) {
   void * arg;
