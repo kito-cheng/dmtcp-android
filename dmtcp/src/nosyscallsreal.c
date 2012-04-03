@@ -245,11 +245,11 @@ off_t _real_lseek(int fd, off_t offset, int whence) {
   REAL_FUNC_PASSTHROUGH_TYPED ( off_t,lseek) ( fd,offset,whence );
 }
 
-#ifdef PID_VIRTUALIZATION
 pid_t _real_getpid(void){
   REAL_FUNC_PASSTHROUGH_PID_T ( getpid ) ( );
 }
 
+#ifdef PID_VIRTUALIZATION
 pid_t _real_getppid(void){
   REAL_FUNC_PASSTHROUGH_PID_T ( getppid ) ( );
 }
@@ -313,6 +313,7 @@ pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options, struct rusage *r
 }
 
 int send_sigwinch; /* not used.  Only version in pidwrappers.cpp is used */
+#endif
 int _real_ioctl(int d, unsigned long int request, ...) {
   void * arg;
   va_list ap;
@@ -326,8 +327,6 @@ int _real_ioctl(int d, unsigned long int request, ...) {
   // /usr/include/unistd.h says syscall returns long int (contrary to man page)
   REAL_FUNC_PASSTHROUGH_TYPED ( int, ioctl ) ( d, request, arg );
 }
-
-#endif
 
 LIB_PRIVATE
 void *_real_mmap(void *addr, size_t length, int prot, int flags,

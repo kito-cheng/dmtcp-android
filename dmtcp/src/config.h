@@ -85,7 +85,7 @@
 #define PACKAGE_VERSION "1.2.4"
 
 /* Use virtual pids for pid-related system calls. */
-#define PID_VIRTUALIZATION /**/
+/* #define PID_VIRTUALIZATION */
 
 /* Use support for ptrace system call. */
 /* #undef PTRACE */
