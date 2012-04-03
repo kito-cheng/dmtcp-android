@@ -69,9 +69,15 @@ int clone_start(void *arg)
 }
 
 //need to forward user clone
+#ifndef ANDROID
 extern "C" int __clone(int (*fn) (void *arg), void *child_stack, int flags,
                        void *arg, int *parent_tidptr,
                        struct user_desc *newtls, int *child_tidptr)
+#else
+extern "C" int __pthread_clone(int (*fn) (void *arg), void *child_stack, int flags,
+                       void *arg, int *parent_tidptr,
+                       struct user_desc *newtls, int *child_tidptr)
+#endif
 {
   WRAPPER_EXECUTION_DISABLE_CKPT();
   dmtcp::ThreadSync::incrementUninitializedThreadCount();
