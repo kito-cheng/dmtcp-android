@@ -31,6 +31,7 @@ __pthread_clone:
         movl    ARG(%esp), %eax
         movl    %eax, 4(%ecx)
         movl    TLS(%esp), %eax
+        movl    %eax, 8(%ecx)
 
         movl    $__NR_clone, %eax
         int     $0x80
