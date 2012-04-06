@@ -2352,12 +2352,10 @@ void dmtcp::AshmemConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
                                               KernelBufferDrainer& drain ){
   JTRACE ("Checkpointing ashmem") (fds[0]) (id()) (_addr) (_size);
   if (_addr) {
-    {
-      dmtcp::vector<char> empty_vec;
-      _data.swap(empty_vec);
-    }
-    _data.resize(_size);
     std::copy((char *)_addr, (char *)_addr+_size, _data.begin());
+    JTRACE("data") (_data);
+    struct ashmem_pin pin = { 0, 0 };
+    _real_ioctl(fds[0], ASHMEM_UNPIN, &pin);
     _real_munmap(_addr, _mmap_len);
   }
 }
@@ -2382,6 +2380,12 @@ void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
     JASSERT (_final_addr == _addr) (_new_addr) (_addr) (_final_addr)
             (_mmap_len) (_mmap_prot) (_mmap_flags) (_mmap_off) (JASSERT_ERRNO);
     std::copy(_data.begin(), _data.end(), (char *)_addr);
+    struct ashmem_pin pin = { 0, 0 };
+    if (_pinned) {
+      _real_ioctl(fds[0], ASHMEM_PIN, &pin);
+    } else {
+      _real_ioctl(fds[0], ASHMEM_UNPIN, &pin);
+    }
   }
 }
 void dmtcp::AshmemConnection::restore ( const dmtcp::vector<int>& fds,
@@ -2405,10 +2409,6 @@ void dmtcp::AshmemConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
     JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
     if (tmpFd != fd)
       _real_close (tmpFd);
-    if (_pinned) {
-      struct ashmem_pin pin = { 0, 0 };
-      _real_ioctl(fd, ASHMEM_PIN, &pin);
-    }
   }
   KernelDeviceToConnection::instance().dbgSpamFds();
 }
@@ -2444,6 +2444,7 @@ void dmtcp::AshmemConnection::ioctl(int request, ...) {
   } else if (request == ASHMEM_SET_SIZE) {
     size_t _new_size = va_arg(args, size_t);
     _size = _new_size;
+    _data.resize(_size);
     JTRACE ("set size for ashmem") ( id() ) (_size);
   } else if (request == ASHMEM_SET_PROT_MASK) {
     _mmap_prot = va_arg(args, int);
