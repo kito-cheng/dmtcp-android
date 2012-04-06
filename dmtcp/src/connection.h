@@ -109,7 +109,10 @@ namespace dmtcp
 #else
         SPECIAL_DEV = 0xa000,
         ASHMEM  = 0xb000,
-        TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | SPECIAL_DEV | ASHMEM
+        PROPERTY = 0xc000,
+        TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO |
+                   EPOLL | EVENTFD | SIGNALFD |
+                   SPECIAL_DEV | ASHMEM | PROPERTY
 #endif
       };
 
@@ -728,6 +731,35 @@ namespace dmtcp
       int _mmap_flags;
       off_t _mmap_off;
       bool _pinned;
+  };
+
+  class PropertyConnection : public Connection
+  {
+    public:
+      PropertyConnection()
+        : Connection (PROPERTY)
+        , _addr(NULL)
+        , _size(0)
+      {
+        JTRACE("creating property connection");
+      }
+
+      virtual void preCheckpoint ( const dmtcp::vector<int>& fds
+                                   , KernelBufferDrainer& drain );
+      virtual void postCheckpoint ( const dmtcp::vector<int>& fds,
+                                    bool isRestart = false);
+      virtual void restore ( const dmtcp::vector<int>&, ConnectionRewirer* );
+      virtual void restoreOptions ( const dmtcp::vector<int>& fds );
+
+      virtual void serializeSubClass ( jalib::JBinarySerializer& o );
+
+      virtual void mergeWith ( const Connection& that );
+
+      virtual void restartDup2(int oldFd, int newFd);
+
+    private:
+      void *_addr;
+      size_t _size;
   };
 #endif
 }

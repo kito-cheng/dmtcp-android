@@ -636,6 +636,9 @@ void dmtcp::ConnectionList::serialize ( jalib::JBinarySerializer& o )
       case Connection::ASHMEM:
         con = new AshmemConnection();
         break;
+      case Connection::PROPERTY:
+        con = new PropertyConnection();
+        break;
 #endif
       default:
         JASSERT ( false ) ( key ) ( o.filename() ).Text ( "unknown connection type" );
@@ -698,12 +701,9 @@ void dmtcp::KernelDeviceToConnection::handlePreExistingFd ( int fd )
     }
     else if (strstr(device.c_str(), "/dev/__properties__"))
     {
-      dmtcp::string _path =
-        jalib::Filesystem::ResolveSymlink ( _procFDPath ( fd ) );
       JTRACE ( "Found pre-existing /dev/__properties__" );
-      // Don't worry, just skip it
-      SpecialDevConnection *con =
-        new SpecialDevConnection ( _path, SpecialDevConnection::PROPERTY_DEV );
+      PropertyConnection *con =
+        new PropertyConnection ();
       create ( fd, con );
     }
     else if (strstr(device.c_str(), "/dev/ashmem"))

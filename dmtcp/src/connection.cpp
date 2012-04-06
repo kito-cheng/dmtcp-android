@@ -2491,4 +2491,99 @@ void dmtcp::AshmemConnection::munmap(void *addr, size_t len) {
   _mmap_flags = 0;
   _mmap_off = 0;
 }
+
+////////////
+///// PROPERTY CHECKPOINTING
+
+static bool findProp(dmtcp::Util::ProcMapsArea *area){
+  int fd = _real_open ( "/proc/self/maps", O_RDONLY);
+  dmtcp::string path;
+
+  if( fd < 0 ){
+    JTRACE("Cannot open /proc/self/maps file");
+    return false;
+  }
+
+  while( dmtcp::Util::readProcMapsLine(fd, area) ){
+    path = area->name;
+    JNOTE("Inspect new /proc/seft/maps line")(path);
+    if( path.size() == 0 ){
+      JNOTE("anonymous region, skip");
+      continue;
+    }
+
+    if( path.find("/dev/__properties__") != dmtcp::string::npos ){
+      _real_close(fd);
+      return true;
+    }
+  }
+
+  _real_close(fd);
+  JASSERT(false).Text("Not found property region???");
+  return false;
+}
+
+void dmtcp::PropertyConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
+                                                KernelBufferDrainer& drain ){
+  JTRACE ("Checkpointing property") (fds[0]);
+  /* Scan for property map region */
+  dmtcp::Util::ProcMapsArea area;
+  bool ret = findProp(&area);
+  if (ret) {
+    _addr = area.addr;
+    _size = area.size;
+  }
+  if (_addr) {
+    _real_munmap(_addr, _size);
+  }
+}
+
+void dmtcp::PropertyConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
+                                                 bool isRestart ) {
+  if (isRestart)
+    restoreOptions ( fds );
+  JTRACE ("Restoring property content") (fds[0]) (_addr);
+  //nothing
+  JASSERT( fds.size() == 1 );
+  if (_addr) {
+    KernelDeviceToConnection::instance().dbgSpamFds();
+    /*
+    int fd;
+    unsigned sz;
+    char *env = getenv("ANDROID_PROPERTY_WORKSPACE");
+    JASSERT(env).Text("Can't get ANDROID_PROPERTY_WORKSPACE");
+    fd = atoi(env);
+    env = strchr(env, ',');
+    sz = atoi(env + 1);
+    */
+    void *_new_addr = _real_mmap(_addr, _size,
+                               PROT_READ, MAP_SHARED, fds[0], 0);
+    //void * _new_addr = _real_mmap(_addr, _mmap_len, _mmap_prot,
+    //                              _mmap_flags, fds[0], _mmap_off);
+    JTRACE("Trace property") (_new_addr) (_addr);
+    JASSERT(_new_addr == _addr) (_new_addr) (_addr);
+  }
+}
+void dmtcp::PropertyConnection::restore ( const dmtcp::vector<int>& fds,
+                                          ConnectionRewirer* ){
+  // nothing
+}
+
+void dmtcp::PropertyConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
+  JTRACE ("Restoring property fd") (fds[0]);
+  JASSERT(fds.size() == 1);
+  KernelDeviceToConnection::instance().dbgSpamFds();
+}
+
+void dmtcp::PropertyConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
+  JSERIALIZE_ASSERT_POINT ( "dmtcp::PropertyConnection" );
+  o & _size & _addr;
+}
+
+void dmtcp::PropertyConnection::mergeWith ( const Connection& that ){
+}
+
+void dmtcp::PropertyConnection::restartDup2(int oldFd, int newFd) {
+  restore(dmtcp::vector<int>(1,newFd), NULL);
+}
 #endif
