@@ -459,7 +459,7 @@ extern "C" READLINK_RET_TYPE readlink(const char *path, char *buf,
 }
 
 
-#if 0
+#if 0 || defined(ANDROID)
 // TODO:  ioctl must use virtualized pids for request = TIOCGPGRP / TIOCSPGRP
 // These are synonyms for POSIX standard tcgetpgrp / tcsetpgrp
 extern "C" {
