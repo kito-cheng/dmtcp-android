@@ -52,6 +52,22 @@ class Ashmem {
       ashmem_unpin_region(_fd, 0, 0);
       _pin = false;
     }
+    void fill(char c) {
+      char *addr = (char*)_addr;
+      for (size_t i=0;i<_size;++i) {
+        addr[i] = c;
+      }
+    }
+    bool test(char c) {
+      char *addr = (char*)_addr;
+      for (size_t i=0;i<_size;++i) {
+        if (addr[i] != c) {
+          printf("fail at %zu, %c (expect : %c)", i, addr[i], c);
+          return false;
+        }
+      }
+      return true;
+    }
   private:
     size_t _size;
     const char *_name;
@@ -61,18 +77,26 @@ class Ashmem {
 };
 
 Ashmem ashmem1(1024, "test1");
-Ashmem ashmem2(1024*4, "test2");
+Ashmem ashmem2(1024, "test2");
 
 int main(int argc, char* argv[])
 {
   int count = 1;
   ashmem1.pin();
+  ashmem1.fill('a');
   ashmem2.pin();
   ashmem2.unpin();
+  ashmem2.fill('b');
   while (1)
   {
       ashmem1.report();
       ashmem2.report();
+      printf("ashmem1 test...%s\n",
+             ashmem1.test('a')
+             ? "pass" : "fail");
+      printf("ashmem2 test...%s\n",
+             ashmem2.test('b')
+             ? "pass" : "fail");
 	  fflush(stdout);
 	  sleep(2);
   }
