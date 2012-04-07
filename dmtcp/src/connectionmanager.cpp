@@ -999,7 +999,7 @@ void dmtcp::MmapManager::handleMmap(void *addr, size_t length,
   if (fd == -1) return;
   dmtcp::Connection& con =
     dmtcp::KernelDeviceToConnection::instance().retrieve( fd );
-  con.mmap(addr, length, prot, flags, offset);
+  con.mmap(addr, length, prot, flags, fd, offset);
 }
 
 void dmtcp::MmapManager::handleMmap64(void *addr, size_t length,
@@ -1009,7 +1009,7 @@ void dmtcp::MmapManager::handleMmap64(void *addr, size_t length,
   if (fd == -1) return;
   dmtcp::Connection& con =
     dmtcp::KernelDeviceToConnection::instance().retrieve( fd );
-  con.mmap64(addr, length, prot, flags, offset);
+  con.mmap64(addr, length, prot, flags, fd, offset);
 }
 
 void dmtcp::MmapManager::handleMunmap(void *addr, size_t length)

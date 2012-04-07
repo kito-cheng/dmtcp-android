@@ -155,9 +155,9 @@ namespace dmtcp
 
       virtual void ioctl(int request, ...);
       virtual void mmap(void *addr, size_t len, int prot,
-                        int flags, off_t off);
+                        int flags, int fd, off_t off);
       virtual void mmap64(void *addr, size_t len, int prot,
-                          int flags, off64_t off);
+                          int flags, int fd, off64_t off);
       virtual void munmap(void *addr, size_t len);
     protected:
       virtual void serializeSubClass ( jalib::JBinarySerializer& o ) = 0;
@@ -715,10 +715,10 @@ namespace dmtcp
       virtual void ioctl(int request, ...);
 
       virtual void mmap(void *addr, size_t len, int prot,
-                        int flags, off_t off);
+                        int flags, int fd, off_t off);
 
       virtual void mmap64(void *addr, size_t len, int prot,
-                          int flags, off64_t off);
+                          int flags, int fd, off64_t off);
 
       virtual void munmap(void *addr, size_t len);
 
@@ -796,10 +796,10 @@ namespace dmtcp
       virtual void ioctl(int request, ...);
 
       virtual void mmap(void *addr, size_t len, int prot,
-                        int flags, off_t off);
+                        int flags, int fd, off_t off);
 
       virtual void mmap64(void *addr, size_t len, int prot,
-                          int flags, off64_t off);
+                          int flags, int fd, off64_t off);
 
       virtual void munmap(void *addr, size_t len);
 

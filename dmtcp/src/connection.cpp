@@ -232,15 +232,17 @@ void dmtcp::Connection::ioctl (int request, ...)
 }
 
 void dmtcp::Connection::mmap64 (void *addr, size_t len, int prot,
-                               int flags, off64_t off)
+                                int flags, int fd, off64_t off)
 {
-  JTRACE ("mmap64") ( id() ) ( addr ) ( len ) (prot) ( flags ) ( off );
+  JTRACE ("mmap64") ( id() ) ( addr ) ( len ) (prot) ( flags )
+                    ( fd ) ( off );
 }
 
 void dmtcp::Connection::mmap (void *addr, size_t len, int prot,
-                              int flags, off_t off)
+                              int flags, int fd, off_t off)
 {
-  JTRACE ("mmap") ( id() ) ( addr ) ( len ) (prot) ( flags ) ( off );
+  JTRACE ("mmap") ( id() ) ( addr ) ( len ) (prot) ( flags )
+                  ( fd ) ( off );
 }
 
 void dmtcp::Connection::munmap (void *addr, size_t len)
@@ -2462,7 +2464,7 @@ void dmtcp::AshmemConnection::ioctl(int request, ...) {
 }
 
 void dmtcp::AshmemConnection::mmap(void *addr, size_t len, int prot,
-                                   int flags, off_t off) {
+                                   int flags, int fd, off_t off) {
   JTRACE ("handle mmap for ashmem") ( id() ) ( addr )
          ( len ) (prot) ( flags ) ( off );
   _addr = addr;
@@ -2473,7 +2475,7 @@ void dmtcp::AshmemConnection::mmap(void *addr, size_t len, int prot,
 }
 
 void dmtcp::AshmemConnection::mmap64(void *addr, size_t len, int prot,
-                                     int flags, off64_t off) {
+                                     int flags, int fd, off64_t off) {
   JTRACE ("handle mmap64 for ashmem") ( id() ) ( addr )
          ( len ) (prot) ( flags ) ( off );
   _addr = addr;
@@ -2720,7 +2722,7 @@ void dmtcp::BinderConnection::ioctl(int request, ...) {
 }
 
 void dmtcp::BinderConnection::mmap(void *addr, size_t len, int prot,
-                                   int flags, off_t off) {
+                                   int flags, int fd, off_t off) {
   _map_addr = addr;
   _map_size = len;
   _map_prot = prot;
@@ -2730,7 +2732,7 @@ void dmtcp::BinderConnection::mmap(void *addr, size_t len, int prot,
 }
 
 void dmtcp::BinderConnection::mmap64(void *addr, size_t len, int prot,
-                                     int flags, off64_t off) {
+                                     int flags, int fd, off64_t off) {
   JASSERT(false).Text("Unhandl mmap64 for binder");
 }
 
