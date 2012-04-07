@@ -120,3 +120,11 @@ LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
 LOCAL_MODULE := dmtcp-forkexec
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp-binder.cpp
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_SHARED_LIBRARIES := libbinder
+LOCAL_MODULE := dmtcp-binder
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
