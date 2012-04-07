@@ -183,6 +183,7 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
   bool isSignalFd = (device.compare("anon_inode:[signalfd]")==0);
 #else
   bool isAshmem = Util::strStartsWith(device, "/dev/ashmem");
+  bool isBinder = Util::strStartsWith(device, "/dev/binder");
 #endif /* ANDROID */
 #ifdef IBV
   bool isInfinibandDevice   = Util::strStartsWith(device, "/dev/infiniband/");
@@ -317,6 +318,22 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
       JTRACE ( "creating Android ashmem connection [on-demand]" );
 
       Connection * c = new AshmemConnection ();
+      ConnectionList::instance().add ( c );
+      _table[deviceName] = c->id();
+    }
+    return deviceName;
+  } else if ( isBinder ) {
+    dmtcp::string deviceName = "binder[" + jalib::XToString(fd) + "]:" + device;
+
+    if(noOnDemandConnection)
+      return deviceName;
+
+    iterator i = _table.find ( deviceName );
+    if ( i == _table.end() )
+    {
+      JTRACE ( "creating Android binder connection [on-demand]" );
+
+      Connection * c = new BinderConnection ();
       ConnectionList::instance().add ( c );
       _table[deviceName] = c->id();
     }
@@ -639,6 +656,9 @@ void dmtcp::ConnectionList::serialize ( jalib::JBinarySerializer& o )
       case Connection::PROPERTY:
         con = new PropertyConnection();
         break;
+      case Connection::BINDER:
+        con = new BinderConnection();
+        break;
 #endif
       default:
         JASSERT ( false ) ( key ) ( o.filename() ).Text ( "unknown connection type" );
@@ -710,6 +730,11 @@ void dmtcp::KernelDeviceToConnection::handlePreExistingFd ( int fd )
     {
       JTRACE ( "Found pre-existing /dev/ashmem ?" );
       JASSERT(false).Text("should not be found pre-existing /dev/ashmem!"); 
+    }
+    else if (strstr(device.c_str(), "/dev/binder"))
+    {
+      JTRACE ( "Found pre-existing /dev/binder ?" );
+      JASSERT(false).Text("should not be found pre-existing /dev/binder!");
     }
     else
 #endif

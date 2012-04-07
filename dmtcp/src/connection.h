@@ -110,6 +110,7 @@ namespace dmtcp
         SPECIAL_DEV = 0xa000,
         ASHMEM  = 0xb000,
         PROPERTY = 0xc000,
+        BINDER = 0xd000,
         TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO |
                    EPOLL | EVENTFD | SIGNALFD |
                    SPECIAL_DEV | ASHMEM | PROPERTY
@@ -760,6 +761,57 @@ namespace dmtcp
     private:
       void *_addr;
       size_t _size;
+  };
+
+  class BinderConnection : public Connection
+  {
+    public:
+      BinderConnection()
+        : Connection (BINDER)
+        , _max_threads(0)
+        , _timeout(0)
+        , _idle_priority(0)
+        , _map_size(0)
+        , _map_addr(NULL)
+        , _map_prot(0)
+        , _map_flags(0)
+        , _is_context_mgr(false)
+      {
+        JTRACE("creating binder connection");
+      }
+
+      virtual void preCheckpoint ( const dmtcp::vector<int>& fds
+                                   , KernelBufferDrainer& drain );
+      virtual void postCheckpoint ( const dmtcp::vector<int>& fds,
+                                    bool isRestart = false);
+      virtual void restore ( const dmtcp::vector<int>&, ConnectionRewirer* );
+      virtual void restoreOptions ( const dmtcp::vector<int>& fds );
+
+      virtual void serializeSubClass ( jalib::JBinarySerializer& o );
+
+      virtual void mergeWith ( const Connection& that );
+
+      virtual void restartDup2(int oldFd, int newFd);
+
+      virtual void ioctl(int request, ...);
+
+      virtual void mmap(void *addr, size_t len, int prot,
+                        int flags, off_t off);
+
+      virtual void mmap64(void *addr, size_t len, int prot,
+                          int flags, off64_t off);
+
+      virtual void munmap(void *addr, size_t len);
+
+    private:
+      size_t _max_threads;
+      int64_t _timeout;
+      int64_t _idle_priority;
+      size_t _map_size;
+      void *_map_addr;
+      int _map_prot;
+      int _map_flags;
+      bool _is_context_mgr;
   };
 #endif
 }
