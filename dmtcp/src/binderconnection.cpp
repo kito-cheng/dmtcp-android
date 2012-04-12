@@ -176,6 +176,12 @@ void dmtcp::BinderConnection::ioctl(int request, ...) {
            (bwr->read_size)
            (bwr->read_consumed)
            (bwr->read_buffer);
+    if (bwr->write_size > 0) {
+      writeHandler(bwr);
+    }
+    if (bwr->read_size > 0) {
+      readHandler(bwr);
+    }
   } else {
     JTRACE ("Unhandle ioctl for binder!") ( id() ) ( request );
   }
@@ -204,3 +210,136 @@ void dmtcp::BinderConnection::munmap(void *addr, size_t len) {
   _map_flags = 0;
 }
 
+typedef void *VoidPtr;
+
+template<class T>
+static inline
+T getAndAdvance(VoidPtr &ptr){
+  T ret = *(T*)ptr;
+  ptr += sizeof(T);
+  return ret;
+}
+
+void dmtcp::BinderConnection::writeHandler(struct binder_write_read *bwr) {
+  uint32_t cmd;
+  void *ptr = (void*)bwr->write_buffer + bwr->write_consumed;
+  void *end = (void*)bwr->write_buffer + bwr->write_size;
+  while (ptr < end) {
+    cmd = getAndAdvance<uint32_t>(ptr);
+    switch (cmd) {
+      case BC_INCREFS:
+      case BC_ACQUIRE:
+      case BC_RELEASE:
+      case BC_DECREFS:
+      {
+        uint32_t target = getAndAdvance<uint32_t>(ptr);
+        JTRACE("Handle for BC_INCREFS | BC_ACQUIRE | BC_RELEASE | BC_DECREFS");
+        break;
+      }
+      case BC_INCREFS_DONE:
+      case BC_ACQUIRE_DONE:
+      {
+        void *node_ptr = getAndAdvance<void *>(ptr);
+        void *cookie = getAndAdvance<void *>(ptr);
+        JTRACE("Handle for BC_INCREFS_DONE | BC_ACQUIRE_DONE");
+        break;
+      }
+      case BC_ATTEMPT_ACQUIRE:
+      case BC_ACQUIRE_RESULT:
+      {
+        /* Not yet implement in driver! */
+        JTRACE("Handle for BC_ATTEMPT_ACQUIRE | BC_ACQUIRE_RESULT");
+        break;
+      }
+      case BC_FREE_BUFFER:
+      {
+        void *data_ptr = getAndAdvance<void *>(ptr);
+        JTRACE("Handle for BC_ATTEMPT_ACQUIRE | BC_ACQUIRE_RESULT");
+        break;
+      }
+      case BC_TRANSACTION:
+      case BC_REPLY:
+      {
+        struct binder_transaction_data tr =
+          getAndAdvance<binder_transaction_data>(ptr);
+        transactionHandler(&tr, cmd == BC_REPLY);
+        JTRACE("Handle for BC_TRANSACTION | BC_REPLY");
+        break;
+      }
+      case BC_REGISTER_LOOPER:
+      {
+        uint32_t target = getAndAdvance<uint32_t>(ptr);
+        void *cookie = getAndAdvance<void*>(ptr);
+
+        JTRACE("Handle for BC_REGISTER_LOOPER");
+        break;
+      }
+      case BC_ENTER_LOOPER:
+      {
+        JTRACE("Handle for BC_ENTER_LOOPER");
+        break;
+      }
+      case BC_EXIT_LOOPER:
+      {
+        JTRACE("Handle for BC_EXIT_LOOPER");
+        break;
+      }
+      case BC_REQUEST_DEATH_NOTIFICATION:
+      case BC_CLEAR_DEATH_NOTIFICATION:
+      {
+        uint32_t target = getAndAdvance<uint32_t>(ptr);
+        void *cookie = getAndAdvance<void*>(ptr);
+
+        JTRACE("Handle for BC_REQUEST_DEATH_NOTIFICATION"
+               " | BC_CLEAR_DEATH_NOTIFICATION");
+        break;
+      }
+      case BC_DEAD_BINDER_DONE:
+      {
+        void *cookie = getAndAdvance<void*>(ptr);
+        JTRACE("Handle for BC_DEAD_BINDER_DONE");
+        break;
+      }
+      default:
+        JASSERT(false).Text("Unhandled Binder cmd!!");
+    }
+  }
+}
+
+void dmtcp::BinderConnection::readHandler(struct binder_write_read *bwr) {
+}
+
+void dmtcp::BinderConnection::transactionHandler(
+                                struct binder_transaction_data *tr,
+                                bool reply) {
+  size_t *offp, *off_end;
+  void *buffer_data = (void*)tr->data.ptr.buffer;
+  offp = (size_t*)buffer_data;
+  off_end = (size_t*)((void *)offp + tr->offsets_size);
+  JTRACE ("Transaction") (offp) (off_end);
+  for (; offp < off_end; offp++) {
+    struct flat_binder_object *fp;
+    fp = (struct flat_binder_object *)(buffer_data + *offp);
+    switch (fp->type) {
+      case BINDER_TYPE_BINDER:
+      case BINDER_TYPE_WEAK_BINDER:
+        {
+          JTRACE("Handle for BINDER_TYPE_BINDER | BINDER_TYPE_WEAK_BINDER");
+          break;
+        }
+      case BINDER_TYPE_HANDLE:
+      case BINDER_TYPE_WEAK_HANDLE:
+        {
+          JTRACE("Handle for BINDER_TYPE_HANDLE | BINDER_TYPE_WEAK_HANDLE");
+          break;
+        }
+      case BINDER_TYPE_FD:
+        {
+          JTRACE("Handle for BINDER_TYPE_FD");
+          break;
+        }
+      default:
+        JASSERT(false).Text("Unhandled transaction for binder!");
+    }
+  }
+}

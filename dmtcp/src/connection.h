@@ -71,6 +71,11 @@
   struct signalfd_siginfo {uint32_t ssi_signo; int dummy;};
 #endif
 
+#ifdef ANDROID
+struct binder_write_read;
+struct binder_transaction_data;
+#endif
+
 namespace jalib { class JSocket; }
 
 namespace dmtcp
@@ -804,6 +809,10 @@ namespace dmtcp
       virtual void munmap(void *addr, size_t len);
 
     private:
+      void writeHandler(struct binder_write_read *bwr);
+      void readHandler(struct binder_write_read *bwr);
+      void transactionHandler(struct binder_transaction_data *tr, bool reply);
+
       size_t _max_threads;
       int64_t _timeout;
       int64_t _idle_priority;
