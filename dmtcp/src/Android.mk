@@ -15,6 +15,7 @@ LOCAL_SRC_FILES:=  connectionstate.cpp \
         util_exec.cpp util_gen.cpp util_init.cpp \
         jalibinterface.cpp processinfo.cpp \
         ckptserializer.cpp resource_manager.cpp \
+        binderconnection.cpp \
 
 # sysvipc.cpp
 
