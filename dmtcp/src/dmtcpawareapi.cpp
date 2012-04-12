@@ -41,9 +41,10 @@ static int numCheckpoints = 0;
 static int numRestarts    = 0;
 
 //user hook functions
-static DmtcpFunctionPointer userHookPreCheckpoint = NULL;
-static DmtcpFunctionPointer userHookPostCheckpoint = NULL;
-static DmtcpFunctionPointer userHookPostRestart = NULL;
+typedef dmtcp::vector<DmtcpFunctionPointer> DmtcpFunctionPointers;
+static DmtcpFunctionPointers userHookPreCheckpoint;
+static DmtcpFunctionPointers userHookPostCheckpoint;
+static DmtcpFunctionPointers userHookPostRestart;
 
 //I wish we could use pthreads for the trickery in this file, but much of our
 //code is executed before the thread we want to wake is restored.  Thus we do
@@ -168,9 +169,9 @@ const DmtcpLocalStatus* __real_dmtcpGetLocalStatus(){
 int __real_dmtcpInstallHooks( DmtcpFunctionPointer preCheckpoint
                               , DmtcpFunctionPointer postCheckpoint
                               , DmtcpFunctionPointer postRestart){
-  userHookPreCheckpoint  = preCheckpoint;
-  userHookPostCheckpoint = postCheckpoint;
-  userHookPostRestart    = postRestart;
+  if (preCheckpoint)  userHookPreCheckpoint.push_back(preCheckpoint);
+  if (postCheckpoint) userHookPostCheckpoint.push_back(postCheckpoint);
+  if (postRestart)    userHookPostRestart.push_back(postRestart);
   return 1;
 }
 
@@ -185,20 +186,32 @@ int __real_dmtcpDelayCheckpointsUnlock(){
 }
 
 void dmtcp::userHookTrampoline_preCkpt() {
-  if(userHookPreCheckpoint != NULL)
-    (*userHookPreCheckpoint)();
+  for (DmtcpFunctionPointers::iterator itr = userHookPreCheckpoint.begin();
+       itr != userHookPreCheckpoint.end();
+       ++itr) {
+    DmtcpFunctionPointer userHooks = *itr;
+    (*userHooks)();
+  }
 }
 
 void dmtcp::userHookTrampoline_postCkpt(bool isRestart) {
   //this function runs before other threads are resumed
   if(isRestart){
     numRestarts++;
-    if(userHookPostRestart != NULL)
-      (*userHookPostRestart)();
+    for (DmtcpFunctionPointers::iterator itr = userHookPostRestart.begin();
+         itr != userHookPostRestart.end();
+         ++itr) {
+      DmtcpFunctionPointer userHooks = *itr;
+      (*userHooks)();
+    }
   }else{
     numCheckpoints++;
-    if(userHookPostCheckpoint != NULL)
-      (*userHookPostCheckpoint)();
+    for (DmtcpFunctionPointers::iterator itr = userHookPostCheckpoint.begin();
+         itr != userHookPostCheckpoint.end();
+         ++itr) {
+      DmtcpFunctionPointer userHooks = *itr;
+      (*userHooks)();
+    }
   }
 }
 
