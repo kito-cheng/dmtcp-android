@@ -145,19 +145,19 @@ void dmtcp::BinderConnection::restartDup2(int oldFd, int newFd) {
   restore(dmtcp::vector<int>(1,newFd), NULL);
 }
 
-void dmtcp::BinderConnection::ioctl(int request, ...) {
-  va_list args;
-  va_start(args, request);
+int dmtcp::BinderConnection::ioctl(int fd, int request, va_list args) {
+  va_list local_ap;
+  va_copy(local_ap, args);
   if (request == BINDER_SET_MAX_THREADS) {
-    size_t *max = va_arg(args, size_t*);
+    size_t *max = va_arg(local_ap, size_t*);
     _max_threads = *max;
     JTRACE ("set binder max threads") ( id() ) ( _max_threads );
   } else if (request == BINDER_SET_IDLE_TIMEOUT){
-    int64_t *timeout = va_arg(args, int64_t*);
+    int64_t *timeout = va_arg(local_ap, int64_t*);
     _timeout = *timeout;
     JTRACE ("set binder time out") ( id() ) ( _timeout );
   } else if (request == BINDER_SET_IDLE_PRIORITY){
-    int64_t *priority = va_arg(args, int64_t*);
+    int64_t *priority = va_arg(local_ap, int64_t*);
     _idle_priority = *priority;
     JTRACE ("set binder idle priority") ( id() ) ( _idle_priority );
   } else if (request == BINDER_SET_CONTEXT_MGR) {
@@ -180,12 +180,17 @@ void dmtcp::BinderConnection::ioctl(int request, ...) {
       writeHandler(bwr);
     }
     if (bwr->read_size > 0) {
+      /* Binder read in w/r sholde be done ioctl first */
+      int ret = _real_ioctl(fd, request, bwr);
       readHandler(bwr);
+      va_end(local_ap);
+      return ret;
     }
   } else {
     JTRACE ("Unhandle ioctl for binder!") ( id() ) ( request );
   }
-  va_end(args);
+  va_end(local_ap);
+  return Connection::ioctl(fd, request, args);
 }
 
 void dmtcp::BinderConnection::mmap(void *addr, size_t len, int prot,

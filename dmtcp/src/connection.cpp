@@ -226,9 +226,12 @@ void dmtcp::Connection::doLocking ( const dmtcp::vector<int>& fds )
     ( fds[0] ) ( JASSERT_ERRNO );
 }
 
-void dmtcp::Connection::ioctl (int request, ...)
+int dmtcp::Connection::ioctl (int fd,int request, va_list args)
 {
   JTRACE ("ioctl") ( id() ) ( request );
+  void * arg;
+  arg = va_arg(args, void *);
+  return _real_ioctl(fd, request, arg);
 }
 
 void dmtcp::Connection::mmap64 (void *addr, size_t len, int prot,
@@ -860,7 +863,7 @@ void dmtcp::PtyConnection::restore(const dmtcp::vector<int>& fds,
 
       if (ptyType() == PTY_MASTER) {
         int packetMode = _ptmxIsPacketMode;
-        ioctl(fds[0], TIOCPKT, &packetMode); /* Restore old packet mode */
+        _real_ioctl(fds[0], TIOCPKT, &packetMode); /* Restore old packet mode */
       }
 
       break;
@@ -1801,7 +1804,7 @@ static bool ptmxTestPacketMode(int masterFd) {
 
   /* B. Now verify that readfds has no more characters to read. */
   ioctlArg = 1;
-  ioctl(masterFd, TIOCINQ, &ioctlArg);
+  _real_ioctl(masterFd, TIOCINQ, &ioctlArg);
   /* Now check if there's a command byte still to read. */
   FD_ZERO(&readfds);
   FD_SET(masterFd, &readfds);
@@ -2434,23 +2437,24 @@ void dmtcp::AshmemConnection::restartDup2(int oldFd, int newFd) {
   restore(dmtcp::vector<int>(1,newFd), &ignored);
 }
 
-void dmtcp::AshmemConnection::ioctl(int request, ...) {
+int dmtcp::AshmemConnection::ioctl(int fd, int request, va_list args) {
   JTRACE ("Handle ioctl for ashmem") ( id() ) ( request );
-  va_list args;
-  va_start(args, request);
+  va_list local_ap;
+  va_copy(local_ap, args);
+
   if (request == ASHMEM_SET_NAME) {
-    char *_new_name = va_arg(args, char*);
+    char *_new_name = va_arg(local_ap, char*);
     if (_new_name) {
       _name = _new_name;
     }
     JTRACE ("set name for ashmem") ( id() ) (_name);
   } else if (request == ASHMEM_SET_SIZE) {
-    size_t _new_size = va_arg(args, size_t);
+    size_t _new_size = va_arg(local_ap, size_t);
     _size = _new_size;
     _data.resize(_size);
     JTRACE ("set size for ashmem") ( id() ) (_size);
   } else if (request == ASHMEM_SET_PROT_MASK) {
-    _mmap_prot = va_arg(args, int);
+    _mmap_prot = va_arg(local_ap, int);
   } else if (request == ASHMEM_PIN) {
     _pinned = true;
     JTRACE ("set pinned for ashmem") ( id() ) (_size);
@@ -2460,7 +2464,8 @@ void dmtcp::AshmemConnection::ioctl(int request, ...) {
   } else {
     JTRACE ("Unhandle ioctl for ashmem!") ( id() ) ( request );
   }
-  va_end(args);
+  va_end(local_ap);
+  return Connection::ioctl(fd, request, args);
 }
 
 void dmtcp::AshmemConnection::mmap(void *addr, size_t len, int prot,

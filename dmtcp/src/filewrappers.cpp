@@ -488,16 +488,13 @@ extern "C" int ioctl(int d,  int request, ...)
     kill(getpid(), SIGWINCH); // Tell application to look up true winsize
 			      // and resize again.
   } else {
-    void * arg;
     va_start(ap, request);
-    arg = va_arg(ap, void *);
-    va_end(ap);
     WRAPPER_EXECUTION_DISABLE_CKPT();
     dmtcp::Connection &con =
       dmtcp::KernelDeviceToConnection::instance().retrieve(d);
-    con.ioctl(request, arg);
-    retval = _real_ioctl(d, request, arg);
+    retval = con.ioctl(d, request, ap);
     WRAPPER_EXECUTION_ENABLE_CKPT();
+    va_end(ap);
   }
   return retval;
 }
