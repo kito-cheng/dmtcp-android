@@ -77,10 +77,13 @@ class Ashmem {
 };
 
 Ashmem ashmem1(1024, "test1");
-Ashmem ashmem2(1024, "test2");
 
 int main(int argc, char* argv[])
 {
+  int size = 0;
+  if (argc >= 2) size = atoi(argv[1]);
+  if (size == 0) size = 1024;
+  Ashmem ashmem2(size, "test2");
   int count = 1;
   ashmem1.pin();
   ashmem1.fill('a');
