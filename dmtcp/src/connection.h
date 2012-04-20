@@ -112,13 +112,13 @@ namespace dmtcp
 #ifndef ANDROID
         TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO | EPOLL | EVENTFD | SIGNALFD
 #else
-        SPECIAL_DEV = 0xa000,
+        LOGGER = 0xa000,
         ASHMEM  = 0xb000,
         PROPERTY = 0xc000,
         BINDER = 0xd000,
         TYPEMASK = TCP | PIPE | PTY | FILE | STDIO | FIFO |
                    EPOLL | EVENTFD | SIGNALFD |
-                   SPECIAL_DEV | ASHMEM | PROPERTY
+                   LOGGER | ASHMEM | PROPERTY
 #endif
       };
 
@@ -645,27 +645,27 @@ namespace dmtcp
 #endif /* ANDROID */
 
 #ifdef ANDROID
-  class SpecialDevConnection : public Connection
+  class LoggerConnection : public Connection
   {
     public:
-      enum DevType
-      {
-         LOG_DEV,
-         PROPERTY_DEV,
-         INVALID_DEV
+      enum LoggerType {
+        EVENT_LOGGER,
+        MAIN_LOGGER,
+        RADIO_LOGGER,
+        SYSTEM_LOGGER,
+        UNKNOWN_LOGGER
       };
-
-      SpecialDevConnection( const dmtcp::string& path, enum DevType type )
-          : Connection ( SPECIAL_DEV )
-          , _dev_type(type)
+      LoggerConnection( enum LoggerType type )
+          : Connection ( LOGGER )
+          , _logger_type(type)
       {
-        JTRACE("creating special dev connection")((int)type);
+        JTRACE("creating logger dev connection")((int)type);
       }
 
-      SpecialDevConnection()
-          : Connection ( SPECIAL_DEV )
+      LoggerConnection()
+          : Connection ( LOGGER )
+          , _logger_type( UNKNOWN_LOGGER )
       {
-        _dev_type = INVALID_DEV;
       };
 
       virtual void preCheckpoint ( const dmtcp::vector<int>& fds
@@ -679,11 +679,11 @@ namespace dmtcp
 
       virtual void mergeWith ( const Connection& that );
 
-      virtual void restartDup2(int oldFd, int newFd);
-
+      static LoggerType path2logger(const char *path);
+      static const char *logger2path(LoggerType type);
     private:
+      LoggerType _logger_type;
       dmtcp::string _path;
-      DevType _dev_type;
   };
 
   class AshmemConnection : public Connection

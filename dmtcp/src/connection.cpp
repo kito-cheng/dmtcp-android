@@ -2303,52 +2303,65 @@ void dmtcp::SignalFdConnection::serializeSubClass ( jalib::JBinarySerializer& o 
 ////////////
 ///// SPECIAL DEV CHECKPOINTING
 
-void dmtcp::SpecialDevConnection::preCheckpoint ( const dmtcp::vector<int>& fds, KernelBufferDrainer& drain ){
-  //JTRACE ("Checkpointing stdio") (fds[0]) (id());
-}
-void dmtcp::SpecialDevConnection::postCheckpoint ( const dmtcp::vector<int>& fds , bool isRestart ) {
-    restoreOptions ( fds );
-  //nothing
+void dmtcp::LoggerConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
+                                              KernelBufferDrainer& drain ){
 }
 
-void dmtcp::SpecialDevConnection::restore(const dmtcp::vector<int>& fds, dmtcp::ConnectionRewirer*) {
-  for(size_t i=0; i<fds.size(); ++i){
-    int fd = fds[i];
-    int tmpFd = -1;
-    switch(_dev_type){
-      case LOG_DEV:
-        JTRACE("Restoring LOG_DEV")(fd);
-        tmpFd= open(_path.c_str(), _fcntlFlags);
-        break;
-      case PROPERTY_DEV:
-        JTRACE("Restoring PROPERTY_DEV (do nothing)")(fd);
-        return;
-      default:
-        JASSERT(false);
-    }
-    errno = 0;
-    JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
-    if (tmpFd != fd)
-      close (tmpFd);
+void dmtcp::LoggerConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
+                                               bool isRestart ) {
+  if (isRestart)
+    restoreOptions ( fds );
+}
+
+dmtcp::LoggerConnection::LoggerType
+dmtcp::LoggerConnection::path2logger(const char *path) {
+  if (strcmp("/dev/log/events", path) == 0) return EVENT_LOGGER;
+  if (strcmp("/dev/log/main", path) == 0)   return MAIN_LOGGER;
+  if (strcmp("/dev/log/radio", path) == 0)  return RADIO_LOGGER;
+  if (strcmp("/dev/log/system", path) == 0) return SYSTEM_LOGGER;
+  JASSERT(false) (path).Text("Unknow Logger type");
+  return UNKNOWN_LOGGER;
+}
+
+const char *dmtcp::LoggerConnection::logger2path(LoggerType type) {
+  switch (type) {
+    case EVENT_LOGGER:  return "/dev/log/events";
+    case MAIN_LOGGER:   return "/dev/log/main";
+    case RADIO_LOGGER:  return "/dev/log/radio";
+    case SYSTEM_LOGGER: return "/dev/log/system";
+    default:
+      JASSERT(false) (type).Text("Unkown logger type");
+      return NULL;
   }
 }
-void dmtcp::SpecialDevConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
-  //nothing
+
+void dmtcp::LoggerConnection::restore(const dmtcp::vector<int>& fds,
+                                      dmtcp::ConnectionRewirer*) {
+  JTRACE("Restore logger connection") (fds);
+  int tmpFd = -1;
+  bool needToClose = true;
+  const char *path = logger2path((LoggerType)_logger_type);
+  tmpFd = _real_open (path, _fcntlFlags);
+  for(size_t i=0; i<fds.size(); ++i){
+    int fd = fds[i];
+    if (fd == tmpFd) needToClose = false;
+    errno = 0;
+    int ret = _real_dup2 ( tmpFd, fd );
+    JASSERT ( ret == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
+  }
+  if (needToClose)
+    _real_close (tmpFd);
 }
 
-void dmtcp::SpecialDevConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
-  JSERIALIZE_ASSERT_POINT ( "dmtcp::SpecialDevConnection" );
-  //JTRACE("Serializing STDIO") (id());
-  o & _path & _dev_type;
+void dmtcp::LoggerConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
 }
 
-void dmtcp::SpecialDevConnection::mergeWith ( const Connection& that ){
-  //Connection::mergeWith(that);
+void dmtcp::LoggerConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
+  JSERIALIZE_ASSERT_POINT ( "dmtcp::LoggerConnection" );
+  o & _logger_type;
 }
 
-void dmtcp::SpecialDevConnection::restartDup2(int oldFd, int newFd){
-  static ConnectionRewirer ignored;
-  restore(dmtcp::vector<int>(1,newFd), &ignored);
+void dmtcp::LoggerConnection::mergeWith ( const Connection& that ){
 }
 
 ////////////
@@ -2412,7 +2425,7 @@ void dmtcp::AshmemConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
     size_t size = _size;
     _real_ioctl ( tmpFd, ASHMEM_SET_SIZE, size );
     errno = 0;
-    JWARNING ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
+    JASSERT ( _real_dup2 ( tmpFd, fd ) == fd ) ( tmpFd ) ( fd ) ( JASSERT_ERRNO );
     if (tmpFd != fd)
       _real_close (tmpFd);
   }

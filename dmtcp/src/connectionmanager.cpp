@@ -184,6 +184,7 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
 #else
   bool isAshmem = Util::strStartsWith(device, "/dev/ashmem");
   bool isBinder = Util::strStartsWith(device, "/dev/binder");
+  bool isLogger = Util::strStartsWith(device, "/dev/log");
 #endif /* ANDROID */
 #ifdef IBV
   bool isInfinibandDevice   = Util::strStartsWith(device, "/dev/infiniband/");
@@ -306,6 +307,23 @@ dmtcp::string dmtcp::KernelDeviceToConnection::fdToDevice ( int fd, bool noOnDem
     return deviceName;
 
 #ifdef ANDROID
+  } else if ( isLogger ) {
+    dmtcp::string deviceName = "logger[" + device + "]";
+
+    if(noOnDemandConnection)
+      return deviceName;
+
+    iterator i = _table.find ( deviceName );
+    if ( i == _table.end() )
+    {
+      JTRACE ( "creating Android logger connection [on-demand]" );
+      LoggerConnection::LoggerType lt =
+        LoggerConnection::path2logger(device.c_str());
+      Connection * c = new LoggerConnection (lt);
+      ConnectionList::instance().add ( c );
+      _table[deviceName] = c->id();
+    }
+    return deviceName;
   } else if ( isAshmem ) {
     dmtcp::string deviceName = "ashmem[" + jalib::XToString(fd) + "]:" + device;
 
@@ -647,8 +665,8 @@ void dmtcp::ConnectionList::serialize ( jalib::JBinarySerializer& o )
         con = new SignalFdConnection(0, NULL, 0); //dummy val
         break;
 #else
-      case Connection::SPECIAL_DEV:
-        con = new SpecialDevConnection();
+      case Connection::LOGGER:
+        con = new LoggerConnection();
         break;
       case Connection::ASHMEM:
         con = new AshmemConnection();
@@ -711,13 +729,8 @@ void dmtcp::KernelDeviceToConnection::handlePreExistingFd ( int fd )
 #ifdef ANDROID
     if (strstr(device.c_str(), "/dev/log/"))
     {
-      dmtcp::string _path =
-        jalib::Filesystem::ResolveSymlink ( _procFDPath ( fd ) );
-      JTRACE ( "Found pre-existing /dev/log/main" );
-      // Don't worry, just skip it
-      SpecialDevConnection *con =
-        new SpecialDevConnection ( _path, SpecialDevConnection::LOG_DEV );
-      create ( fd, con );
+      JTRACE ( "Found pre-existing /dev/log/" );
+      device = dmtcp::KernelDeviceToConnection::instance().fdToDevice(fd);
     }
     else if (strstr(device.c_str(), "/dev/__properties__"))
     {
