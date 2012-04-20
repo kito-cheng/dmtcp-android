@@ -84,20 +84,16 @@ void dmtcp::BinderConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
   JTRACE ("Restoring binder content") (fds[0]);
   if (_map_addr) {
     KernelDeviceToConnection::instance().dbgSpamFds();
-    void * _new_addr = _real_mmap(0, _map_size, _map_prot,
+    void * _new_addr = _real_mmap(_map_addr, _map_size, _map_prot,
                                   _map_flags, fds[0], 0);
-    JTRACE ("first mmap") (_new_addr) (_map_addr)
-           (_map_size) (_map_prot) (_map_flags) (JASSERT_ERRNO);;
-    void *_final_addr = _new_addr;
-    if (_new_addr != _map_addr) {
-      _final_addr = (void*)_real_syscall(__NR_mremap, _new_addr, _map_size,
-                                         _map_size, MREMAP_FIXED | MREMAP_MAYMOVE,
-                                         _map_addr);
-    }
-    dumpmap();
-    JASSERT (_final_addr == _map_addr) (_new_addr) (_map_addr) (_final_addr)
+    JASSERT (_new_addr == _map_addr) (_new_addr) (_map_addr)
             (_map_size) (_map_prot) (_map_flags) (JASSERT_ERRNO);
   }
+/*
+  if (!_is_context_mgr) {
+    reconnect();
+  }
+*/
 }
 
 void dmtcp::BinderConnection::restore ( const dmtcp::vector<int>& fds,
@@ -168,7 +164,7 @@ int dmtcp::BinderConnection::ioctl(int fd, int request, va_list args) {
   } else if (request == BINDER_VERSION) {
     JTRACE ("get binder version") ( id() );
   } else if (request == BINDER_WRITE_READ) {
-    binder_write_read *bwr = va_arg(args, binder_write_read*);
+    binder_write_read *bwr = va_arg(local_ap, binder_write_read*);
     JTRACE ("binder read/write") ( id() )
            (bwr->write_size)
            (bwr->write_consumed)
@@ -176,16 +172,17 @@ int dmtcp::BinderConnection::ioctl(int fd, int request, va_list args) {
            (bwr->read_size)
            (bwr->read_consumed)
            (bwr->read_buffer);
+    #if 0
     if (bwr->write_size > 0) {
       writeHandler(bwr);
     }
     if (bwr->read_size > 0) {
       /* Binder read in w/r sholde be done ioctl first */
-      int ret = _real_ioctl(fd, request, bwr);
-      readHandler(bwr);
+      int ret = readHandler(fd, bwr);
       va_end(local_ap);
       return ret;
     }
+    #endif
   } else {
     JTRACE ("Unhandle ioctl for binder!") ( id() ) ( request );
   }
@@ -259,7 +256,7 @@ void dmtcp::BinderConnection::writeHandler(struct binder_write_read *bwr) {
       case BC_FREE_BUFFER:
       {
         void *data_ptr = getAndAdvance<void *>(ptr);
-        JTRACE("Handle for BC_ATTEMPT_ACQUIRE | BC_ACQUIRE_RESULT");
+        JTRACE("Handle for BC_FREE_BUFFER");
         break;
       }
       case BC_TRANSACTION:
@@ -311,7 +308,112 @@ void dmtcp::BinderConnection::writeHandler(struct binder_write_read *bwr) {
   }
 }
 
-void dmtcp::BinderConnection::readHandler(struct binder_write_read *bwr) {
+int dmtcp::BinderConnection::readHandler(int fd,
+                                         struct binder_write_read *bwr) {
+  struct binder_write_read old_bwr;
+  memcpy(&old_bwr, bwr, sizeof(struct binder_write_read));
+  int ret = _real_ioctl(fd, BINDER_WRITE_READ, bwr);
+  if (ret < 0) return ret;
+  JTRACE("readHandler");
+  //android::Parcel reply;
+  uint32_t cmd;
+  void *ptr = (void*)old_bwr.read_buffer + old_bwr.read_consumed;
+  void *end = (void*)old_bwr.read_buffer + old_bwr.read_size;
+  struct binder_transaction_data tr;
+  int32_t err;
+  while (ptr < end) {
+    struct binder_work *w;
+    struct binder_transaction *t = NULL;
+    cmd = getAndAdvance<uint32_t>(ptr);
+    switch(cmd){
+      case BR_TRANSACTION_COMPLETE:
+        {
+          JTRACE("Handle for BR_TRANSACTION_COMPLETE");
+          return ret;
+        }
+        break;
+      case BR_DEAD_REPLY:
+        {
+          JTRACE("Handle for BR_DEAD_REPLY");
+          return ret;
+        }
+        break;
+      case BR_FAILED_REPLY:
+        {
+          JTRACE("Handle for BR_FAILED_REPLY");
+          return ret;
+        }
+        break;
+      case BR_ACQUIRE_RESULT:
+        {
+          JTRACE("Handle for BR_ACQUIRE_RESULT");
+        }
+        break;
+      case BR_REPLY:
+        {
+          JTRACE("Handle for BR_REPLY") (ptr);
+          tr = getAndAdvance<struct binder_transaction_data>(ptr);
+          JTRACE("post Handle for BR_REPLY") (ptr);
+          JTRACE ("Transaction") (tr.target.handle)
+                                 (tr.cookie)
+                                 (tr.code)
+                                 (tr.flags)
+                                 (tr.sender_pid)
+                                 (tr.sender_euid)
+                                 (tr.data_size)
+                                 (tr.offsets_size)
+                                 (tr.data.ptr.buffer);
+          return ret;
+        }
+        break;
+      case BR_ERROR:
+        {
+          err = getAndAdvance<uint32_t>(ptr);
+          JTRACE("Handle for BR_ERROR");
+        }
+        break;
+      case BR_OK:
+        {
+          JTRACE("Handle for BR_OK");
+        }
+        break;
+      case BR_ACQUIRE:
+      case BR_RELEASE:
+      case BR_INCREFS:
+      case BR_DECREFS:
+      case BR_ATTEMPT_ACQUIRE:
+        {
+          int32_t ref = getAndAdvance<uint32_t>(ptr);
+          int32_t obj = getAndAdvance<uint32_t>(ptr);
+          JTRACE("Handle for BR_ACQUIRE | BR_RELEASE | BR_INCREFS | "
+                            "BR_DECREFS | BR_ATTEMPT_ACQUIRE");
+        }
+        break;
+      case BR_TRANSACTION:
+        {
+          JTRACE("Handle for BR_TRANSACTION");
+          tr = getAndAdvance<struct binder_transaction_data>(ptr);
+        }
+        break;
+      case BR_DEAD_BINDER:
+      case BR_CLEAR_DEATH_NOTIFICATION_DONE:
+        {
+          int32_t proxy= getAndAdvance<uint32_t>(ptr);
+          JTRACE("Handle for BR_DEAD_BINDER | BR_CLEAR_DEATH_NOTIFICATION_DONE");
+        }
+        break;
+      case BR_FINISHED:
+      case BR_NOOP:
+      case BR_SPAWN_LOOPER:
+        {
+          JTRACE("Handle for BR_FINISHED | BR_NOOP | BR_SPAWN_LOOPER");
+        }
+        break;
+      default:
+        JTRACE("Unhandled cmd in read Handler") (cmd);
+    }
+  }
+  return ret;
 }
 
 void dmtcp::BinderConnection::transactionHandler(
@@ -319,9 +421,18 @@ void dmtcp::BinderConnection::transactionHandler(
                                 bool reply) {
   size_t *offp, *off_end;
   void *buffer_data = (void*)tr->data.ptr.buffer;
-  offp = (size_t*)buffer_data;
+  offp = (size_t*)(buffer_data + tr->data_size);
   off_end = (size_t*)((void *)offp + tr->offsets_size);
-  JTRACE ("Transaction") (offp) (off_end);
+  JTRACE ("Transaction") (tr->target.handle)
+                         (tr->cookie)
+                         (tr->code)
+                         (tr->flags)
+                         (tr->sender_pid)
+                         (tr->sender_euid)
+                         (tr->data_size)
+                         (tr->offsets_size)
+                         (tr->data.ptr.buffer)
+                         (offp) (off_end);
   for (; offp < off_end; offp++) {
     struct flat_binder_object *fp;
     fp = (struct flat_binder_object *)(buffer_data + *offp);

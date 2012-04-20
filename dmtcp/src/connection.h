@@ -810,7 +810,7 @@ namespace dmtcp
 
     private:
       void writeHandler(struct binder_write_read *bwr);
-      void readHandler(struct binder_write_read *bwr);
+      int readHandler(int fd, struct binder_write_read *bwr);
       void transactionHandler(struct binder_transaction_data *tr, bool reply);
 
       size_t _max_threads;
