@@ -16,6 +16,7 @@ LOCAL_SRC_FILES:=  connectionstate.cpp \
         jalibinterface.cpp processinfo.cpp \
         ckptserializer.cpp resource_manager.cpp \
         binderconnection.cpp \
+        androidconnection.cpp \
 
 # sysvipc.cpp
 
