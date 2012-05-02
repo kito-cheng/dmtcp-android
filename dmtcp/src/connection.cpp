@@ -298,8 +298,10 @@ void dmtcp::TcpConnection::onListen ( int backlog )
   if (really_verbose) {
     JTRACE ( "Listening." ) ( id() ) ( backlog );
   }
+#ifndef ANDROID
   JASSERT ( tcpType() == TCP_BIND ) ( tcpType() ) ( id() )
     .Text ( "Listening on a non-bind()ed socket????" );
+#endif
   // A -1 backlog is not an error.
   //JASSERT ( backlog > 0 ) ( backlog )
     //.Text ( "That is an odd backlog????" );
