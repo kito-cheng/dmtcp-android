@@ -166,6 +166,9 @@ int dmtcp::Util::elfType(const char *pathname, bool *isElf, bool *is32bitElf) {
 
 bool dmtcp::Util::isStaticallyLinked(const char *filename)
 {
+#ifdef ANDROID
+  return false;
+#endif
   bool isElf, is32bitElf;
   char pathname[PATH_MAX];
   expandPathname(filename, pathname, sizeof(pathname));
