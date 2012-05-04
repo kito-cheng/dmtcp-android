@@ -30,6 +30,10 @@
 # include "config.h"
 #endif
 
+#ifdef ANDROID
+#define JALIB_USE_MALLOC
+#endif
+
 static pthread_mutex_t allocateLock = PTHREAD_MUTEX_INITIALIZER;
 static bool _enable_locks = true;
 
@@ -227,10 +231,12 @@ typedef JGlobalAlloc< JFixedAllocStack<2048, 1024*32 > > lvl4;
 void* JAllocDispatcher::allocate(size_t n) {
   lock();
   void *retVal;
+#ifndef ANDROID
   if(n <= lvl1::N) retVal = lvl1::allocate(); else
   if(n <= lvl2::N) retVal = lvl2::allocate(); else
   if(n <= lvl3::N) retVal = lvl3::allocate(); else
   if(n <= lvl4::N) retVal = lvl4::allocate(); else
+#endif
   retVal = _alloc_raw(n);
   unlock();
   return retVal;
@@ -238,10 +244,12 @@ void* JAllocDispatcher::allocate(size_t n) {
 void JAllocDispatcher::deallocate(void* ptr, size_t n){
   if (ptr == NULL || n == 0) return;
   lock();
+#ifndef ANDROID
   if(n <= lvl1::N) lvl1::deallocate(ptr); else
   if(n <= lvl2::N) lvl2::deallocate(ptr); else
   if(n <= lvl3::N) lvl3::deallocate(ptr); else
   if(n <= lvl4::N) lvl4::deallocate(ptr); else
+#endif
   _dealloc_raw(ptr, n);
   unlock();
 }
