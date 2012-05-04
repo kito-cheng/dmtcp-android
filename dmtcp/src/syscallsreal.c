@@ -212,8 +212,15 @@ void *__helper_dlsym();
 void *__helper_dlclose();
 #endif
 
+#ifndef ANDROID
 #define GET_FUNC_ADDR(name) \
   _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, #name);
+#else
+#define GET_FUNC_ADDR(name) \
+  _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, #name); \
+  if (_real_func_addr[ENUM(name)] == NULL) \
+    _real_func_addr[ENUM(name)] = _real_dlsym(RTLD_NEXT, "__"#name);
+#endif
 
 LIB_PRIVATE
 void initialize_libc_wrappers()
