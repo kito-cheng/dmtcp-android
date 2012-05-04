@@ -1368,8 +1368,9 @@ void mtcp_thread_return()
   mtcp_no ();
 
   /* Do whatever to unlink and free thread block */
+  Thread *thread = getcurrenthread();
   lock_threads();
-  threadisdead(getcurrenthread());
+  threadisdead(thread);
   unlk_threads();
 }
 
@@ -1688,9 +1689,12 @@ static void threadisdead (Thread *thread)
   parent = thread -> parent;
   if (parent != NULL) {
     for (lthread = &(parent -> children);
-         (xthread = *lthread) != thread;
+         xthread && (xthread = *lthread) != thread;
          lthread = &(xthread -> siblings)) {}
-    *lthread = xthread -> siblings;
+    DPRINTF("final lthread = %x xthread = %x\n",
+            lthread, xthread);
+    if (xthread)
+      *lthread = xthread -> siblings;
   }
 
   /* If this thread has children, give them to its parent */
@@ -1835,6 +1839,12 @@ again:
     case ST_SIGENABLED: {
       stopthisthread (0);
       goto again;
+    }
+
+    /* The thread state come from mtcp_thread_return is
+       already change to a zombie state! */
+    case ST_ZOMBIE: {
+      return (1);
     }
 
     default: {
