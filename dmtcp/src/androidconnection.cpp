@@ -332,8 +332,16 @@ void dmtcp::PropertyConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
                                PROT_READ, MAP_SHARED, fds[0], 0);
     //void * _new_addr = _real_mmap(_addr, _mmap_len, _mmap_prot,
     //                              _mmap_flags, fds[0], _mmap_off);
-    JTRACE("Trace property") (_new_addr) (_addr);
-    JASSERT(_new_addr == _addr) (_new_addr) (_addr);
+    void *_final_addr = _new_addr;
+    if (_new_addr != _addr) {
+      _final_addr = (void*)_real_syscall(__NR_mremap, _new_addr, _size,
+                                         _size, MREMAP_FIXED | MREMAP_MAYMOVE,
+                                         _addr);
+    }
+    JASSERT (_final_addr == _addr) (_new_addr) (_addr) (_final_addr)
+            (_size) (JASSERT_ERRNO);
+    JTRACE("Trace property") (_final_addr) (_new_addr) (_addr);
+    JASSERT(_final_addr == _addr) (_new_addr) (_addr);
   }
 }
 void dmtcp::PropertyConnection::restore ( const dmtcp::vector<int>& fds,
