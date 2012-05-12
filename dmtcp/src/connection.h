@@ -265,10 +265,18 @@ namespace dmtcp
 
       //called on restart when _id collides with another connection
       virtual void mergeWith ( const Connection& that );
+
+#ifdef ANDROID
+      virtual void restartDup2(int oldFd, int newFd);
+#endif
+
     private:
       virtual void serializeSubClass ( jalib::JBinarySerializer& o );
       TcpConnection& asTcp();
     private:
+#ifdef ANDROID
+      bool                    _sockFromInit;
+#endif
       int                     _sockDomain;
       int                     _sockType;
       int                     _sockProtocol;

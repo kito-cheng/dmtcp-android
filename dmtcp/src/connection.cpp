@@ -259,6 +259,9 @@ void dmtcp::Connection::munmap (void *addr, size_t len)
 /*onSocket*/
 dmtcp::TcpConnection::TcpConnection ( int domain, int type, int protocol )
   : Connection ( TCP_CREATED )
+#ifdef ANDROID
+  , _sockFromInit(false)
+#endif
   , _sockDomain ( domain )
   , _sockType ( type )
   , _sockProtocol ( protocol )
@@ -301,6 +304,10 @@ void dmtcp::TcpConnection::onListen ( int backlog )
 #ifndef ANDROID
   JASSERT ( tcpType() == TCP_BIND ) ( tcpType() ) ( id() )
     .Text ( "Listening on a non-bind()ed socket????" );
+#else
+  JASSERT( tcpType() == TCP_BIND || _sockFromInit == true )
+    ( tcpType() ) ( id() ) ( _sockFromInit )
+    .Text ( "Listening on a non-bind()ed socket????" );
 #endif
   // A -1 backlog is not an error.
   //JASSERT ( backlog > 0 ) ( backlog )
@@ -332,6 +339,9 @@ void dmtcp::TcpConnection::onConnect( int sockfd,
 /*onAccept*/
 dmtcp::TcpConnection::TcpConnection ( const TcpConnection& parent, const ConnectionIdentifier& remote )
   : Connection ( TCP_ACCEPT )
+#ifdef ANDROID
+  , _sockFromInit(false)
+#endif
   , _sockDomain ( parent._sockDomain )
   , _sockType ( parent._sockType )
   , _sockProtocol ( parent._sockProtocol )
@@ -402,9 +412,31 @@ void dmtcp::TcpConnection::preCheckpointPeerLookup ( const dmtcp::vector<int>& f
 }
 #endif
 
+#ifdef ANDROID
+void dmtcp::TcpConnection::restartDup2(int oldFd, int fd){
+  errno = 0;
+  if(_sockFromInit) {
+    JTRACE("restartDup2 for ANDROID_SOCKET_zygote");
+    return;
+  }
+  JWARNING ( _real_dup2 ( oldFd, fd ) == fd ) ( oldFd ) ( fd ) ( JASSERT_ERRNO );
+}
+#endif
+
 void dmtcp::TcpConnection::preCheckpoint ( const dmtcp::vector<int>& fds
     , KernelBufferDrainer& drain )
 {
+#ifdef ANDROID
+  const char *initSockStr = getenv("ANDROID_SOCKET_zygote");
+  if (initSockStr) {
+    int initSock = atoi(initSockStr);
+    if (fds[0] == initSock) {
+      JTRACE("Found ANDROID_SOCKET_zygote !");
+      _sockFromInit = true;
+    }
+  }
+  if(_sockFromInit) return;
+#endif
   JASSERT ( fds.size() > 0 ) ( id() );
 
   if ( ( _fcntlFlags & O_ASYNC ) != 0 )
@@ -508,6 +540,9 @@ void dmtcp::TcpConnection::doRecvHandshakes(const dmtcp::vector<int>& fds,
 
 void dmtcp::TcpConnection::postCheckpoint ( const dmtcp::vector<int>& fds, bool isRestart )
 {
+#ifdef ANDROID
+  if(_sockFromInit) return;
+#endif
   if ( ( _fcntlFlags & O_ASYNC ) != 0 )
   {
     if (really_verbose) {
@@ -521,6 +556,9 @@ void dmtcp::TcpConnection::restoreSocketPair(const dmtcp::vector<int>& fds,
                                              dmtcp::TcpConnection *peer,
                                              const dmtcp::vector<int>& peerfds)
 {
+#ifdef ANDROID
+  if(_sockFromInit) return;
+#endif
   int sv[2];
   JASSERT(_peerType == PEER_SOCKETPAIR && _socketpairPeerId == peer->id())
     (_peerType) (_socketpairPeerId) (peer->id());
@@ -556,6 +594,9 @@ void dmtcp::TcpConnection::restoreSocketPair(const dmtcp::vector<int>& fds,
 void dmtcp::TcpConnection::restore(const dmtcp::vector<int>& fds,
                                    ConnectionRewirer *rewirer)
 {
+#ifdef ANDROID
+  if(_sockFromInit) return;
+#endif
   JASSERT ( fds.size() > 0 );
   switch ( tcpType() )
   {
@@ -691,6 +732,9 @@ void dmtcp::TcpConnection::restore(const dmtcp::vector<int>& fds,
 
 void dmtcp::TcpConnection::restoreOptions ( const dmtcp::vector<int>& fds )
 {
+#ifdef ANDROID
+  if(_sockFromInit) return;
+#endif
   typedef dmtcp::map< int, dmtcp::map< int, jalib::JBuffer > >::iterator levelIterator;
   typedef dmtcp::map< int, jalib::JBuffer >::iterator optionIterator;
 
@@ -1670,6 +1714,9 @@ void dmtcp::Connection::serialize ( jalib::JBinarySerializer& o )
 void dmtcp::TcpConnection::serializeSubClass ( jalib::JBinarySerializer& o )
 {
   JSERIALIZE_ASSERT_POINT ( "dmtcp::TcpConnection" );
+#ifdef ANDROID
+  o & _sockFromInit;
+#endif
   o & _sockDomain  & _sockType & _sockProtocol & _listenBacklog & _peerType
     & _bindAddrlen & _bindAddr & _acceptRemoteId & _socketpairPeerId;
 
