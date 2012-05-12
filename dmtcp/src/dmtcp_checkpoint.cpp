@@ -450,7 +450,6 @@ int main ( int argc, char** argv )
 
   preloadLibs += jalib::Filesystem::FindHelperUtility ( "dmtcphijack.so" );
 #ifdef ANDROID
-  preloadLibs = preloadLibs + ":" + "libhijack_pthread.so";
   preloadLibs = preloadLibs + ":" + "libhijack_binder.so";
 #endif
 

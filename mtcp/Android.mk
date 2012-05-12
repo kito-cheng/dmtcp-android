@@ -8,6 +8,7 @@ LOCAL_SRC_FILES:= mtcp.c mtcp_restart_nolibc.c \
         mtcp_safemmap.c mtcp_safe_open.c \
         mtcp_state.c mtcp_check_vdso.c mtcp_sigaction.c mtcp_fastckpt.c \
         getcontest-x86.S setcontest-x86.S clone-x86.S \
+        bionic_pthread_r.c
 #        bionic_pthread.c
 
 LOCAL_C_INCLUDES := bionic/libc/private/ \
@@ -22,7 +23,7 @@ endif
 LOCAL_CFLAGS+= $(MTCP_LOCAL_CFLAGS) -DDEBUG -DTIMING -g3 -O0
 LOCAL_LDFLAGS:= -T $(LOCAL_PATH)/mtcp.t -Wl,-Map,$(LOCAL_PATH)/mtcp.map
 LOCAL_MODULE := libmtcp
-LOCAL_SHARED_LIBRARIES := libhijack_pthread libc libdl
+LOCAL_SHARED_LIBRARIES := libc libdl
 LOCAL_STATIC_LIBRARIES := liblog
 LOCAL_MODULE_TAGS := optional
 

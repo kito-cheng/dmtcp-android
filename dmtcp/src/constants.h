@@ -50,7 +50,7 @@
 #define LIBPTHREAD_FILENAME "libpthread.so.0"
 #else
 #define LIBC_FILENAME "libc.so"
-#define LIBPTHREAD_FILENAME "libhijack_pthread.so"
+#define LIBPTHREAD_FILENAME "libc.so"
 #endif
 
 #define MTCP_FILENAME "libmtcp.so"

@@ -238,8 +238,9 @@ void initialize_libc_wrappers()
     _real_func_addr[ENUM(signal)] = _real_dlsym(RTLD_NEXT, "bsd_signal");
     _real_func_addr[ENUM(dlopen)] = __helper_dlopen();
     _real_func_addr[ENUM(dlclose)] = __helper_dlclose();
-    void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
-    _real_func_addr[ENUM(__clone)] = _real_dlsym(pthread_handle, "__pthread_clone");
+    //void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
+    //_real_func_addr[ENUM(__clone)] = _real_dlsym(pthread_handle, "__pthread_clone");
+    _real_func_addr[ENUM(__clone)] = _real_dlsym(RTLD_NEXT, "__pthread_clone");
 #endif
     _libc_wrappers_initialized = 1;
   }
@@ -259,7 +260,8 @@ void initialize_libpthread_wrappers()
 {
   if (!_libpthread_wrappers_initialized) {
     dmtcp_setThreadPerformingDlopenDlsym();
-    void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
+    //void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
+    void *pthread_handle = _real_dlopen("libc.so", RTLD_NOW);
     dmtcp_unsetThreadPerformingDlopenDlsym();
 
     if (pthread_handle == NULL) {
