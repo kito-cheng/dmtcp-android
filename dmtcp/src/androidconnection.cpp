@@ -116,12 +116,74 @@ void dmtcp::LoggerConnection::mergeWith ( const Connection& that ){
 ////////////
 ///// ASHMEM DEV CHECKPOINTING
 
+void dmtcp::AshmemConnection::collectMapAreas() {
+  JTRACE("Collecting mmap areas for ashmem")(_name);
+  _areas.clear();
+  int fd = _real_open ( "/proc/self/maps", O_RDONLY);
+  dmtcp::string path;
+  dmtcp::string target_path = "/dev/ashmem/" + _name;
+  char *startAddr = (char*)_addr;
+  char *endAddr = (char*)_addr+_size;
+  dmtcp::Util::ProcMapsArea area;
+  size_t totalSize = 0;
+  int protMask = PROT_WRITE | PROT_READ | PROT_EXEC;
+
+  JASSERT(fd >= 0).Text("Cannot open /proc/self/maps file");
+
+  while( dmtcp::Util::readProcMapsLine(fd, &area) ) {
+    path = area.name;
+    if( path.size() == 0 ) {
+      continue;
+    }
+
+    if( Util::strStartsWith(path, target_path.c_str()) &&
+        area.addr >= startAddr && area.endAddr <= endAddr) {
+      _areas.push_back(area);
+      if ((area.prot & protMask) != 0) {
+        totalSize += area.size;
+      }
+    }
+  }
+  _mem_size = totalSize;
+  JTRACE("actully mem size for ashmem") (_name)
+         ( _mem_size );
+  _real_close(fd);
+}
+
+void dmtcp::AshmemConnection::saveOptions ( const dmtcp::vector<int>& fds ) {
+  // Collect memory permissions
+  collectMapAreas();
+  // Allocate memory for ashmem
+  _data.resize(_mem_size);
+}
+
 void dmtcp::AshmemConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
                                               KernelBufferDrainer& drain ){
-  JTRACE ("Checkpointing ashmem") (fds[0]) (id()) (_addr) (_size);
+  JTRACE ("Checkpointing ashmem") (fds[0]) (id()) (_name) (_addr) (_size);
+  const int protMask = PROT_WRITE | PROT_READ | PROT_EXEC;
   if (_addr) {
-    std::copy((char *)_addr, (char *)_addr+_size, _data.begin());
-    JTRACE("data") (_data);
+    size_t offset = 0;
+    for (dmtcp::vector<dmtcp::Util::ProcMapsArea>::iterator itr = _areas.begin();
+         itr != _areas.end();
+         ++itr) {
+      dmtcp::Util::ProcMapsArea &area = *itr;
+
+      void *addr = area.addr;
+      if (area.prot & protMask) {
+        JTRACE("backup ashmem content") (_name)
+              (addr) (area.flags) (offset) (area.prot);
+
+        /* Change memory permission for backup */
+        mprotect(area.addr, area.size, PROT_WRITE | PROT_READ);
+
+        std::copy(area.addr, area.endAddr, _data.begin()+offset);
+        offset += area.size;
+      } else {
+        JTRACE("backup ashmem content (skip)") (_name)
+              (addr) (area.flags) (offset) (area.prot);
+      }
+    }
+
     struct ashmem_pin pin = { 0, 0 };
     _real_ioctl(fds[0], ASHMEM_UNPIN, &pin);
     _real_munmap(_addr, _mmap_len);
@@ -132,12 +194,14 @@ void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
                                                bool isRestart ) {
   if (isRestart)
     restoreOptions ( fds );
-  JTRACE ("Restoring ashmem content") (fds[0]) (id()) (_addr) (_size);
-  //nothing
+  JTRACE ("Restoring ashmem content") (fds[0]) (id()) (_name) (_addr) (_size);
   JASSERT( fds.size() == 1 );
+  const int protMask = PROT_WRITE | PROT_READ | PROT_EXEC;
   if (_addr) {
-    KernelDeviceToConnection::instance().dbgSpamFds();
-    void * _new_addr = _real_mmap(_addr, _mmap_len, _mmap_prot,
+    /* Set the memory permission allow READ/WRITE here,
+     * We will reset the correct permission after restore content.
+     */
+    void * _new_addr = _real_mmap(_addr, _mmap_len, PROT_READ | PROT_WRITE,
                                   _mmap_flags, fds[0], _mmap_off);
     void *_final_addr = _new_addr;
     if (_new_addr != _addr) {
@@ -146,8 +210,34 @@ void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
                                          _addr);
     }
     JASSERT (_final_addr == _addr) (_new_addr) (_addr) (_final_addr)
-            (_mmap_len) (_mmap_prot) (_mmap_flags) (_mmap_off) (JASSERT_ERRNO);
-    std::copy(_data.begin(), _data.end(), (char *)_addr);
+            (_mmap_len) (_mmap_prot) (_mmap_off) (JASSERT_ERRNO);
+
+    size_t offset = 0;
+    for (dmtcp::vector<dmtcp::Util::ProcMapsArea>::iterator itr = _areas.begin();
+         itr != _areas.end();
+         ++itr) {
+      dmtcp::Util::ProcMapsArea &area = *itr;
+
+      void *addr = area.addr;
+      if (area.prot & protMask) {
+        std::copy(_data.begin()+offset,
+                  _data.begin()+offset+area.size,
+                  area.addr);
+        JTRACE("restore ashmem content") (_name)
+              (addr) (area.prot) (offset);
+        offset += area.size;
+      } else {
+        JTRACE("restore ashmem content (skip)") (_name)
+              (addr) (area.flags) (offset);
+      }
+      /* Restore the right permission here */
+      mprotect(area.addr, area.size, area.prot);
+    }
+    {
+      // force release memory
+      dmtcp::vector<char> empty;
+      _data.swap(empty);
+    }
     struct ashmem_pin pin = { 0, 0 };
     if (_pinned) {
       _real_ioctl(fds[0], ASHMEM_PIN, &pin);
@@ -185,10 +275,11 @@ void dmtcp::AshmemConnection::restoreOptions ( const dmtcp::vector<int>& fds ){
 void dmtcp::AshmemConnection::serializeSubClass ( jalib::JBinarySerializer& o ){
   JSERIALIZE_ASSERT_POINT ( "dmtcp::AshmemConnection" );
   //JTRACE("Serializing STDIO") (id());
-  o & _name & _size & _addr;
+  o & _name & _size & _mem_size & _addr;
   o & _mmap_len & _mmap_prot;
   o & _mmap_flags & _mmap_off;
   o & _data & _pinned;
+  o & _areas;
 }
 
 void dmtcp::AshmemConnection::mergeWith ( const Connection& that ){
@@ -214,7 +305,6 @@ int dmtcp::AshmemConnection::ioctl(int fd, int request, va_list args) {
   } else if (request == ASHMEM_SET_SIZE) {
     size_t _new_size = va_arg(local_ap, size_t);
     _size = _new_size;
-    _data.resize(_size);
     JTRACE ("set size for ashmem") ( id() ) (_size);
   } else if (request == ASHMEM_SET_PROT_MASK) {
     _mmap_prot = va_arg(local_ap, int);

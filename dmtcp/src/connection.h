@@ -42,6 +42,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "util.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -702,15 +703,19 @@ namespace dmtcp
           , _name()
           , _addr(NULL)
           , _size(0)
+          , _mem_size(0)
           , _data()
           , _mmap_len(0)
           , _mmap_prot(0)
           , _mmap_flags(0)
           , _mmap_off(0)
           , _pinned()
+          , _areas()
       {
         JTRACE("creating ashmem dev connection");
       }
+
+      virtual void saveOptions ( const dmtcp::vector<int>& fds );
 
       virtual void preCheckpoint ( const dmtcp::vector<int>& fds
                                    , KernelBufferDrainer& drain );
@@ -736,15 +741,18 @@ namespace dmtcp
       virtual void munmap(void *addr, size_t len);
 
     private:
+      void collectMapAreas();
       dmtcp::string _name;
       void *_addr;
       size_t _size;
+      size_t _mem_size;
       dmtcp::vector<char> _data;
       size_t _mmap_len;
       int _mmap_prot;
       int _mmap_flags;
       off_t _mmap_off;
       bool _pinned;
+      dmtcp::vector<dmtcp::Util::ProcMapsArea> _areas;
   };
 
   class PropertyConnection : public Connection
