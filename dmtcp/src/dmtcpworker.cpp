@@ -607,6 +607,8 @@ void dmtcp::DmtcpWorker::waitForStage1Suspend()
   waitForCoordinatorMsg ( "SUSPEND", DMT_DO_SUSPEND );
   UniquePid::updateCkptDir();
 
+  earlyCheckpoint();
+
   JTRACE("got SUSPEND message, preparing to acquire all Thread-sync locks");
   ThreadSync::acquireLocks();
 
@@ -913,4 +915,10 @@ void dmtcp::DmtcpWorker::waitForStage4Resume()
 void dmtcp::DmtcpWorker::restoreVirtualPidTable()
 {
   dmtcp::ProcessInfo::instance().restoreProcessGroupInfo();
+}
+
+void dmtcp::earlyCheckpoint()
+{
+  JTRACE ( "Early Checkpoint" );
+  userHookEarlyCheckpoint();
 }

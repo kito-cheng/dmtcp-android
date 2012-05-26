@@ -44,7 +44,8 @@ extern int   __dyn_dmtcpCheckpoint() WEAK;
 extern int   __dyn_dmtcpRunCommand(char command) WEAK;
 extern int   __dyn_dmtcpDelayCheckpointsLock() WEAK;
 extern int   __dyn_dmtcpDelayCheckpointsUnlock() WEAK;
-extern int   __dyn_dmtcpInstallHooks( DmtcpFunctionPointer preCheckpoint
+extern int   __dyn_dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint
+                                    ,  DmtcpFunctionPointer preCheckpoint
                                     ,  DmtcpFunctionPointer postCheckpoint
                                     ,  DmtcpFunctionPointer postRestart) WEAK;
 extern const DmtcpCoordinatorStatus* __dyn_dmtcpGetCoordinatorStatus() WEAK;
@@ -97,8 +98,9 @@ const DmtcpLocalStatus* dmtcpGetLocalStatus(){
   DMTCPAWARE_STUB( dmtcpGetLocalStatus, (), NULL );
 }
 
-int dmtcpInstallHooks( DmtcpFunctionPointer preCp
+int dmtcpInstallHooks( DmtcpFunctionPointer earlyCp
+                     , DmtcpFunctionPointer preCp
                      , DmtcpFunctionPointer postCp
                      , DmtcpFunctionPointer postRs){
-  DMTCPAWARE_STUB( dmtcpInstallHooks, (preCp,postCp,postRs), -128 );
+  DMTCPAWARE_STUB( dmtcpInstallHooks, (earlyCp, preCp,postCp,postRs), -128 );
 }

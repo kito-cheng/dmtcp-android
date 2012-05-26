@@ -40,6 +40,9 @@ void restoreUserLDPRELOAD();
 namespace dmtcp
 {
 
+  void userHookEarlyCheckpoint();
+  void earlyCheckpoint();
+
   class ConnectionState;
 
 #ifdef EXTERNAL_SOCKET_HANDLING

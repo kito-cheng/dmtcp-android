@@ -42,6 +42,7 @@ static int numRestarts    = 0;
 
 //user hook functions
 typedef dmtcp::vector<DmtcpFunctionPointer> DmtcpFunctionPointers;
+static DmtcpFunctionPointers userHookEarlyCheckpoints;
 static DmtcpFunctionPointers userHookPreCheckpoint;
 static DmtcpFunctionPointers userHookPostCheckpoint;
 static DmtcpFunctionPointers userHookPostRestart;
@@ -166,9 +167,11 @@ const DmtcpLocalStatus* __real_dmtcpGetLocalStatus(){
   return &status;
 }
 
-int __real_dmtcpInstallHooks( DmtcpFunctionPointer preCheckpoint
+int __real_dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint
+                              , DmtcpFunctionPointer preCheckpoint
                               , DmtcpFunctionPointer postCheckpoint
                               , DmtcpFunctionPointer postRestart){
+  if (earlyCheckpoint)userHookEarlyCheckpoints.push_back(earlyCheckpoint);
   if (preCheckpoint)  userHookPreCheckpoint.push_back(preCheckpoint);
   if (postCheckpoint) userHookPostCheckpoint.push_back(postCheckpoint);
   if (postRestart)    userHookPostRestart.push_back(postRestart);
@@ -183,6 +186,15 @@ int __real_dmtcpDelayCheckpointsLock(){
 int __real_dmtcpDelayCheckpointsUnlock(){
   dmtcp::ThreadSync::delayCheckpointsUnlock();
   return 1;
+}
+
+void dmtcp::userHookEarlyCheckpoint() {
+  for (DmtcpFunctionPointers::iterator itr = userHookEarlyCheckpoints.begin();
+       itr != userHookEarlyCheckpoints.end();
+       ++itr) {
+    DmtcpFunctionPointer userHooks = *itr;
+    (*userHooks)();
+  }
 }
 
 void dmtcp::userHookTrampoline_preCkpt() {
@@ -236,10 +248,12 @@ EXTERNC int __dyn_dmtcpDelayCheckpointsLock(){
 EXTERNC int __dyn_dmtcpDelayCheckpointsUnlock(){
   return __real_dmtcpDelayCheckpointsUnlock();
 }
-EXTERNC int __dyn_dmtcpInstallHooks( DmtcpFunctionPointer preCheckpoint
+EXTERNC int __dyn_dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint
+                                    , DmtcpFunctionPointer preCheckpoint
                                     ,  DmtcpFunctionPointer postCheckpoint
                                     ,  DmtcpFunctionPointer postRestart){
-  return __real_dmtcpInstallHooks(preCheckpoint, postCheckpoint, postRestart);
+  return __real_dmtcpInstallHooks(earlyCheckpoint, preCheckpoint,
+                                  postCheckpoint, postRestart);
 }
 EXTERNC const DmtcpCoordinatorStatus* __dyn_dmtcpGetCoordinatorStatus(){
   return __real_dmtcpGetCoordinatorStatus();
@@ -265,10 +279,12 @@ EXTERNC int dmtcpDelayCheckpointsLock(){
 EXTERNC int dmtcpDelayCheckpointsUnlock(){
   return __real_dmtcpDelayCheckpointsUnlock();
 }
-EXTERNC int dmtcpInstallHooks( DmtcpFunctionPointer preCheckpoint,
+EXTERNC int dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint,
+                               DmtcpFunctionPointer preCheckpoint,
                                DmtcpFunctionPointer postCheckpoint,
                                DmtcpFunctionPointer postRestart){
-  return __real_dmtcpInstallHooks(preCheckpoint, postCheckpoint, postRestart);
+  return __real_dmtcpInstallHooks(earlyCheckpoint, preCheckpoint,
+                                  postCheckpoint, postRestart);
 }
 EXTERNC const DmtcpCoordinatorStatus* dmtcpGetCoordinatorStatus(){
   return __real_dmtcpGetCoordinatorStatus();

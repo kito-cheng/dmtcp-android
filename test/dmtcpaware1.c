@@ -5,6 +5,10 @@
 /* Be sure to compile with -I<path>; see Makefile in this directory. */
 #include "dmtcpaware.h"
 
+void early(){
+  printf("HOOK: earlyCheckpoint\n");
+}
+
 void pre(){
   printf("HOOK: preCheckpoint\n");
 }
@@ -20,7 +24,7 @@ void restart(){
 int main(int argc, char* argv[])
 {
   if(dmtcpIsEnabled())
-    dmtcpInstallHooks(pre,post,restart);
+    dmtcpInstallHooks(early,pre,post,restart);
 
   int r;
   const DmtcpCoordinatorStatus* cs;

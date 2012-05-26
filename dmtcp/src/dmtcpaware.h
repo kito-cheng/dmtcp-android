@@ -102,7 +102,8 @@ int dmtcpDelayCheckpointsUnlock();
  * - Set to NULL to disable.
  * - Returns 1 on success, <=0 on error
  */
-int dmtcpInstallHooks( DmtcpFunctionPointer preCheckpoint
+int dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint
+                      , DmtcpFunctionPointer preCheckpoint
                       , DmtcpFunctionPointer postCheckpoint
                       , DmtcpFunctionPointer postRestart);
 
