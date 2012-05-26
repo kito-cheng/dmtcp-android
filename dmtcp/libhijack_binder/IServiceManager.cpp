@@ -47,10 +47,13 @@ static String8 good_old_string(const String16& src)
     return name8;
 }
 
-void dmtcp_pre_checkpoint() {
+static void dmtcp_early_checkpoint() {
 }
 
-void dmtcp_resume_checkpoint() {
+static void dmtcp_pre_checkpoint() {
+}
+
+static void dmtcp_resume_checkpoint() {
   if (gDefaultServiceManager != NULL) {
 /*
     gDefaultServiceManager.clear();*/
@@ -79,7 +82,8 @@ sp<IServiceManager> defaultServiceManager()
         if (gDefaultServiceManager == NULL) {
             gDefaultServiceManager = interface_cast<IServiceManager>(
                 ProcessState::self()->getContextObject(NULL));
-          dmtcpInstallHooks(NULL, NULL, dmtcp_resume_checkpoint);
+          dmtcpInstallHooks(dmtcp_early_checkpoint, NULL,
+                            NULL, dmtcp_resume_checkpoint);
         }
     }
     

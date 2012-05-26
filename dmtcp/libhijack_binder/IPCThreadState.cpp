@@ -18,6 +18,7 @@
 
 #include <binder/IPCThreadState.h>
 
+#include <dmtcpaware.h>
 #include <binder/Binder.h>
 #include <binder/BpBinder.h>
 #include <cutils/sched_policy.h>
@@ -505,6 +506,7 @@ status_t IPCThreadState::transact(int32_t handle,
                                   uint32_t code, const Parcel& data,
                                   Parcel* reply, uint32_t flags)
 {
+    dmtcpDelayCheckpointsLock();
     status_t err = data.errorCheck();
 
     flags |= TF_ACCEPT_FDS;
@@ -524,6 +526,7 @@ status_t IPCThreadState::transact(int32_t handle,
     
     if (err != NO_ERROR) {
         if (reply) reply->setError(err);
+        dmtcpDelayCheckpointsUnlock();
         return (mLastError = err);
     }
     
@@ -560,6 +563,7 @@ status_t IPCThreadState::transact(int32_t handle,
         err = waitForResponse(NULL, NULL);
     }
     
+    dmtcpDelayCheckpointsUnlock();
     return err;
 }
 
