@@ -128,3 +128,25 @@ LOCAL_SHARED_LIBRARIES := libbinder
 LOCAL_MODULE := dmtcp-binder
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp-binder-server.cpp
+LOCAL_CFLAGS+= -O0 -g3 -DDEBUG -DTIMING
+LOCAL_C_INCLUDES += \
+    bionic \
+    bionic/libstdc++/include \
+    external/stlport/stlport \
+    external/gtest/include \
+    system/extras/tests/include \
+    frameworks/base/include
+LOCAL_STATIC_LIBRARIES += \
+    libgtest \
+    libgtest_main \
+    libtestUtil
+LOCAL_SHARED_LIBRARIES += \
+    libutils \
+    libstlport \
+    libbinder
+LOCAL_MODULE := dmtcp-binder-server
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
