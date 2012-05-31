@@ -970,7 +970,10 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
     if (area->size > file_size) {
       DPRINTF("File size (%d) on disk smaller than mmap() size (%d).\n"
               "  Extending it to mmap() size.\n", file_size, area->size);
+#ifndef ANDROID
+      /* Never truncate file in Android */
       mtcp_sys_ftruncate(imagefd, area->size);
+#endif
     }
 
     /* Acquire read lock on the shared file before doing an mmap. See
@@ -981,8 +984,15 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
     DPRINTF("After Acquiring lock on shared file :%s\n", area_name);
   }
 
+#ifdef ANDROID
+  /* Memory region size always use file size rather in Android port */
+  int file_size = mtcp_sys_lseek(imagefd, 0, SEEK_END);
+  mmappedat = mtcp_sys_mmap (area->addr, file_size, area->prot,
+                             area->flags, imagefd, area->offset);
+#else
   mmappedat = mtcp_sys_mmap (area->addr, area->size, area->prot,
                              area->flags, imagefd, area->offset);
+#endif
   if (mmappedat == MAP_FAILED) {
     MTCP_PRINTF("error %d mapping %s offset %d at %p\n",
                  mtcp_sys_errno, area_name, area->offset, area->addr);
@@ -1049,6 +1059,10 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
        * For example, gconv-modules.cache is shared with read-exec perm.
        * If read-only permission, warn user that we're using curr. file.
        */
+#ifndef ANDROID
+      /* Never call mtcp_sys_access in Android port since it's will
+       * crash when permissions not enough
+       */
       if (imagefd >= 0 && -1 == mtcp_sys_access(area->name, X_OK)) {
         if (mtcp_strstartswith(area->name, "/usr/") ||
             mtcp_strstartswith(area->name, "/var/")) {
@@ -1065,6 +1079,7 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
                       area->name, __FILE__, __LINE__);
         }
       }
+#endif
 #ifndef FAST_CKPT_RST_VIA_MMAP
       skipfile (area->size);
 #endif
