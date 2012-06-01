@@ -122,8 +122,11 @@ void dmtcp::AshmemConnection::collectMapAreas() {
   int fd = _real_open ( "/proc/self/maps", O_RDONLY);
   dmtcp::string path;
   dmtcp::string target_path = "/dev/ashmem/" + _name;
+  size_t pageSize = sysconf(_SC_PAGESIZE);
+  size_t pageMask = ~(pageSize - 1);
+  size_t pageAlignedSize = (_size + pageSize - 1) & pageMask;
   char *startAddr = (char*)_addr;
-  char *endAddr = (char*)_addr+_size;
+  char *endAddr = (char*)_addr+pageAlignedSize;
   dmtcp::Util::ProcMapsArea area;
   size_t totalSize = 0;
   int protMask = PROT_WRITE | PROT_READ | PROT_EXEC;
@@ -135,18 +138,41 @@ void dmtcp::AshmemConnection::collectMapAreas() {
     if( path.size() == 0 ) {
       continue;
     }
-
+    void *start = area.addr;
+    void *end = area.endAddr;
+    void *vStartAddr = startAddr;
+    void *vEndAddr = endAddr;
     if( Util::strStartsWith(path, target_path.c_str()) &&
         area.addr >= startAddr && area.endAddr <= endAddr) {
-      _areas.push_back(area);
       if ((area.prot & protMask) != 0) {
-        totalSize += area.size;
+        /* Scan all the content from the end
+         * to prevent store/restore lots of zero-filled memory
+         */
+        size_t zeroContent=0;
+        unsigned *begin = ((unsigned *)area.endAddr)-1;
+        unsigned *end = (unsigned *)startAddr;
+        for (unsigned *memContent = begin;
+             memContent >= end;
+             memContent--) {
+          if (*memContent != 0) break;
+          zeroContent++;
+        }
+        /* Note: we use the filesize field to record the size of
+         *       real need to store/restore */
+        area.filesize = area.size - (zeroContent * sizeof(unsigned));
+        totalSize += area.filesize;
+        JTRACE("Ashmem region") (start) (end) (area.filesize) (zeroContent);
+      } else {
+        area.filesize = 0;
+        JTRACE("Ashmem region (non stored)")
+               (start) (end) (area.size);
       }
+      _areas.push_back(area);
     }
   }
   _mem_size = totalSize;
   JTRACE("actully mem size for ashmem") (_name)
-         ( _mem_size );
+         ( _size ) ( _mem_size );
   _real_close(fd);
 }
 
@@ -170,14 +196,19 @@ void dmtcp::AshmemConnection::preCheckpoint ( const dmtcp::vector<int>& fds,
 
       void *addr = area.addr;
       if (area.prot & protMask) {
-        JTRACE("backup ashmem content") (_name)
-              (addr) (area.flags) (offset) (area.prot);
+        char *backup = &_data[0];
+        void *backupPlace = backup;
+        JTRACE("backup ashmem content") (_name) (backupPlace)
+              (addr) (area.flags) (area.filesize) (offset) (area.prot);
 
-        /* Change memory permission for backup */
+        /* Note: we use the `filesize` field to record the size of
+         *       real need to store/restore
+         *
+         * Change memory permission for backup */
         mprotect(area.addr, area.size, PROT_WRITE | PROT_READ);
 
-        std::copy(area.addr, area.endAddr, _data.begin()+offset);
-        offset += area.size;
+        std::copy(area.addr, area.addr + area.filesize, _data.begin()+offset);
+        offset += area.filesize;
       } else {
         JTRACE("backup ashmem content (skip)") (_name)
               (addr) (area.flags) (offset) (area.prot);
@@ -220,12 +251,14 @@ void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
 
       void *addr = area.addr;
       if (area.prot & protMask) {
+        /* Note: we use the filesize field to record the size of
+         *       real need to store/restore */
         std::copy(_data.begin()+offset,
-                  _data.begin()+offset+area.size,
+                  _data.begin()+offset+area.filesize,
                   area.addr);
         JTRACE("restore ashmem content") (_name)
               (addr) (area.prot) (offset);
-        offset += area.size;
+        offset += area.filesize;
       } else {
         JTRACE("restore ashmem content (skip)") (_name)
               (addr) (area.flags) (offset);
