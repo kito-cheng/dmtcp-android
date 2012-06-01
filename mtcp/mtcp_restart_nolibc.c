@@ -597,14 +597,34 @@ static void readmemoryareas (void)
             && mtcp_strstr(area.name, "[vsyscall]")) {
           mmapfile (area.addr, area.size, area.prot | PROT_WRITE, area.flags);
         } else {
+#ifdef ANDROID
+          /* In Android port, we don't save file-mapped region
+           * without write permission and unchanged file.
+           */
+          if ((area.prot & MTCP_PROT_SKIP_PAGE) != 0) {
+            MTCP_PRINTF("skip restore content for [%s] + %x\n",
+                        area.name, area.offset);
+          } else {
+            mtcp_readfile(mtcp_restore_cpfd, area.addr, area.size);
+          }
+#else
           mtcp_readfile(mtcp_restore_cpfd, area.addr, area.size);
+#endif
         }
-        if (!(area.prot & PROT_WRITE))
-          if (mtcp_sys_mprotect (area.addr, area.size, area.prot) < 0) {
+        if (!(area.prot & PROT_WRITE)) {
+#ifdef ANDROID
+          int prot_mask = PROT_READ | PROT_WRITE | PROT_EXEC;
+          if (mtcp_sys_mprotect (area.addr, area.size,
+                                 area.prot & prot_mask) < 0)
+#else
+          if (mtcp_sys_mprotect (area.addr, area.size, area.prot) < 0)
+#endif
+          {
             MTCP_PRINTF("error %d write-protecting %p bytes at %p\n",
                         mtcp_sys_errno, area.size, area.addr);
             mtcp_abort ();
           }
+        }
       }
 #endif // FAST_CKPT_RST_VIA_MMAP
     }
@@ -885,6 +905,11 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
   }
 
   if (imagefd < 0) {
+#ifdef ANDROID
+    DPRINTF("Shared file %s not found. "
+            "It's should not happen in Android port!!\n", area_name);
+    mtcp_abort();
+#endif
     // If the shared file doesn't exist on the disk, we try to create it
     DPRINTF("Shared file %s not found. Creating new\n", area_name);
 
@@ -1081,7 +1106,18 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
       }
 #endif
 #ifndef FAST_CKPT_RST_VIA_MMAP
+#ifdef ANDROID
+      /* In Android port, we don't save any file-mapped region
+       * without write permission even it's a shared file.
+       */
+      MTCP_PRINTF("Just skip %s, and there is no backup in image file\n",
+                  area->name);
+      if ((area->prot & MTCP_PROT_SKIP_PAGE) == 0) {
+        skipfile (area->size);
+      }
+#else
       skipfile (area->size);
+#endif
 #endif
     }
   }

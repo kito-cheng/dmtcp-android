@@ -221,6 +221,12 @@ typedef unsigned int mtcp_segreg_t;
  * This assumes: PROT_READ == 0x1, PROT_WRITE == 0x2, and PROT_EXEC == 0x4
  */
 #define MTCP_PROT_ZERO_PAGE (PROT_EXEC << 1)
+#ifdef ANDROID
+/* MTCP_PROT_SKIP_PAGE used for tag a file-mapped memory region
+ * is unchanged, just read from original file.
+ */
+#define MTCP_PROT_SKIP_PAGE (MTCP_PROT_ZERO_PAGE << 1)
+#endif
 
 #define STACKSIZE 2048      // size of temporary stack (in quadwords)
 //#define MTCP_MAX_PATH 256   // maximum path length for mtcp_find_executable

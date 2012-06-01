@@ -164,6 +164,11 @@ int main(int argc, char **argv) {
 
     readall(fd, &area, sizeof area);
     readcs (fd, CS_AREACONTENTS);
+#ifdef ANDROID
+    if ((area.prot & MTCP_PROT_SKIP_PAGE) != 0) {
+      printf("%p-%p %s skipped\n", area.addr, area.addr + area.size, area.name);
+    } else
+#endif
     if ((area.prot & MTCP_PROT_ZERO_PAGE) == 0) {
       skipfile (fd, area.size);
     }

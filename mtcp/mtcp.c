@@ -3356,6 +3356,45 @@ static void writememoryarea (int fd, Area *area, int stack_was_seen,
                || !stack_was_seen ))) /* If vdso appeared before stack, it can be
                                          replaced */
   {
+#ifdef ANDROID
+    /* In Android port, we don't save any file-mapped region
+     * without write permission.
+     *
+     * The exception is the file is already deleted or
+     * region has any chagned.
+     */
+    if ((area->name[0] != '\0') &&
+        (strstr(area->name, "(deleted)") == NULL) &&
+        ((0 != strcmp(area -> name, "[vsyscall]"))) &&
+        ((0 != strcmp(area -> name, "[vdso]"))) &&
+        ((area->prot & PROT_WRITE) == 0)) {
+      int diff_fd = open(area->name, O_RDONLY);
+      /* We need to take care about the end of file-mapped memory region
+       * since the area size is page-aligned, it's may large than real
+       * file size.
+       */
+      size_t filesize = lseek(diff_fd, 0, SEEK_END);
+      size_t limit_size = filesize - area->offset;
+      lseek(diff_fd, area->offset, SEEK_SET);
+      size_t cmp_size = (area->size > limit_size) ? limit_size : area->size;
+      void *cmp_mems = mmap(0, cmp_size, PROT_READ, MAP_PRIVATE,
+                            diff_fd, area->offset);
+      int any_changed = memcmp(cmp_mems, area->addr, cmp_size) != 0;
+      munmap(cmp_mems, cmp_size);
+      close(diff_fd);
+      /* If here is any changed then we will store this region into
+       * image file, otherwise just skip it
+       */
+      if (!any_changed) {
+        area->prot |= MTCP_PROT_SKIP_PAGE;
+        MTCP_PRINTF("Skip writing content for [%s] [0x%x-0x%x]\n",
+                    area->name, area->addr, area->addr+area->size);
+      } else {
+        MTCP_PRINTF("File-mapped memory region [%s] [0x%x-0x%x] was changed\n",
+                    area->name, area->addr, area->addr+area->size);
+      }
+    }
+#endif
 #ifndef FAST_CKPT_RST_VIA_MMAP
     mtcp_writecs (fd, CS_AREADESCRIP);
     mtcp_writefile (fd, area, sizeof *area);
@@ -3371,7 +3410,13 @@ static void writememoryarea (int fd, Area *area, int stack_was_seen,
       fastckpt_write_mem_region(fd, area);
 #else
       mtcp_writecs (fd, CS_AREACONTENTS);
+#ifdef ANDROID
+      if ((area->prot & MTCP_PROT_SKIP_PAGE) == 0) {
+        mtcp_writefile (fd, area -> addr, area -> size);
+      }
+#else
       mtcp_writefile (fd, area -> addr, area -> size);
+#endif
 #endif
     } else {
       MTCP_PRINTF("UnImplemented");
