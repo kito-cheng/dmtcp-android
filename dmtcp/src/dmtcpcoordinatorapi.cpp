@@ -268,8 +268,10 @@ void dmtcp::DmtcpCoordinatorAPI::sendUserCommand(char c, int* result /*= NULL*/)
   //receive REPLY
   reply.poison();
   _coordinatorSocket >> reply;
+#ifndef ANDROID
   reply.assertValid();
   JASSERT ( reply.type == DMT_USER_CMD_RESULT );
+#endif
 
   if(result!=NULL){
     memcpy( result, reply.params, sizeof(reply.params) );
