@@ -57,7 +57,12 @@ namespace
 
   static void _writeTimerLogLine ( const jalib::string& name, double time )
   {
+#ifdef ANDROID
+    static std::ofstream logfile ( "/data/jtimings.csv",
+                                   std::ios::out | std::ios::app );
+#else
     static std::ofstream logfile ( "jtimings.csv", std::ios::out | std::ios::app );
+#endif
     logfile << _testName() <<  ',' << name << ',' << time << std::endl;
     JASSERT_STDERR << "JTIMER(" <<  name << ") : " << time << '\n';
   }
