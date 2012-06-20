@@ -375,6 +375,10 @@ void dmtcp::DmtcpCoordinatorAPI::startNewCoordinator(int modes, int isRestart)
   const char *coordinatorAddr = getenv ( ENV_VAR_NAME_HOST );
   if(coordinatorAddr == NULL) coordinatorAddr = DEFAULT_HOST;
   const char *coordinatorPortStr = getenv ( ENV_VAR_NAME_PORT );
+  int coordinatorPort = coordinatorPortStr == NULL
+                          ? DEFAULT_PORT
+                          : jalib::StringToInt(coordinatorPortStr);
+
 
   dmtcp::string s = coordinatorAddr;
   if(s != "localhost" && s != "127.0.0.1" &&
@@ -400,7 +404,7 @@ void dmtcp::DmtcpCoordinatorAPI::startNewCoordinator(int modes, int isRestart)
     setenv ( ENV_VAR_NAME_PORT, coordPort.c_str(), 1 );
   }
 
-  JTRACE("Starting a new coordinator automatically.") (coordinatorPortStr);
+  JTRACE("Starting a new coordinator automatically.") (coordinatorPort);
 
   if(fork()==0){
     dmtcp::string coordinator = jalib::Filesystem::FindHelperUtility("dmtcp_coordinator");
