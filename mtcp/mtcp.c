@@ -3368,20 +3368,27 @@ static void writememoryarea (int fd, Area *area, int stack_was_seen,
         ((0 != strcmp(area -> name, "[vsyscall]"))) &&
         ((0 != strcmp(area -> name, "[vdso]"))) &&
         ((area->prot & PROT_WRITE) == 0)) {
-      int diff_fd = open(area->name, O_RDONLY);
+      int diff_fd = mtcp_sys_open(area->name, O_RDONLY, 0);
       /* We need to take care about the end of file-mapped memory region
        * since the area size is page-aligned, it's may large than real
        * file size.
+       *
+       * The system call should always call mtcp_sys_* version to prevent
+       * hijack by DMTCP.
        */
-      size_t filesize = lseek(diff_fd, 0, SEEK_END);
+      size_t filesize = mtcp_sys_lseek(diff_fd, 0, SEEK_END);
       size_t limit_size = filesize - area->offset;
-      lseek(diff_fd, area->offset, SEEK_SET);
+      mtcp_sys_lseek(diff_fd, area->offset, SEEK_SET);
       size_t cmp_size = (area->size > limit_size) ? limit_size : area->size;
-      void *cmp_mems = mmap(0, cmp_size, PROT_READ, MAP_PRIVATE,
-                            diff_fd, area->offset);
+      void *cmp_mems = mtcp_sys_mmap(0, cmp_size, PROT_READ, MAP_PRIVATE,
+                                 diff_fd, area->offset);
+      /* Call the memcmp from libc instead of mtcp_memcmp since the
+       * libc will provider faster implmentaton.
+       * And it's safe to call libc here.
+       */
       int any_changed = memcmp(cmp_mems, area->addr, cmp_size) != 0;
-      munmap(cmp_mems, cmp_size);
-      close(diff_fd);
+      mtcp_sys_munmap(cmp_mems, cmp_size);
+      mtcp_sys_close(diff_fd);
       /* If here is any changed then we will store this region into
        * image file, otherwise just skip it
        */
