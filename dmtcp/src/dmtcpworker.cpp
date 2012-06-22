@@ -76,6 +76,9 @@ LIB_PRIVATE void pthread_atfork_prepare();
 LIB_PRIVATE void pthread_atfork_parent();
 LIB_PRIVATE void pthread_atfork_child();
 
+static pthread_mutex_t syncLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t syncCond = PTHREAD_COND_INITIALIZER;
+
 bool dmtcp::DmtcpWorker::_exitInProgress = false;
 
 static void processDmtcpCommands(dmtcp::string programName,
@@ -528,6 +531,14 @@ void dmtcp::DmtcpWorker::waitForCoordinatorMsg(dmtcp::string msgStr,
       _exit ( 0 );
     }
 
+    if (msg.type == DMT_SYNCHRONIZE) {
+      JTRACE ( "Received SYNCHRONIZE message from coordinator" );
+      pthread_mutex_lock(&syncLock);
+      pthread_cond_broadcast(&syncCond);
+      pthread_mutex_unlock(&syncLock);
+      continue;
+    }
+
     // The ckpt thread can receive multiple DMT_RESTORE_WAITING or
     // DMT_FORCE_RESTART messages while waiting for a DMT_DO_REFILL message, we
     // need to ignore them and wait for the DMT_DO_REFILL message to arrive.
@@ -536,11 +547,12 @@ void dmtcp::DmtcpWorker::waitForCoordinatorMsg(dmtcp::string msgStr,
       break;
     }
 
-  } while((type == DMT_DO_REFILL
-           || type == DMT_DO_REGISTER_NAME_SERVICE_DATA
-           || type == DMT_DO_SEND_QUERIES)
-          && (msg.type == DMT_RESTORE_WAITING ||
-              msg.type == DMT_FORCE_RESTART));
+  } while(((type == DMT_DO_REFILL
+            || type == DMT_DO_REGISTER_NAME_SERVICE_DATA
+            || type == DMT_DO_SEND_QUERIES)
+           && (msg.type == DMT_RESTORE_WAITING ||
+               msg.type == DMT_FORCE_RESTART))
+          || msg.type == DMT_SYNCHRONIZE);
 
   JASSERT ( msg.type == type ) ( msg.type ) (type);
 
@@ -915,6 +927,20 @@ void dmtcp::DmtcpWorker::waitForStage4Resume()
 void dmtcp::DmtcpWorker::restoreVirtualPidTable()
 {
   dmtcp::ProcessInfo::instance().restoreProcessGroupInfo();
+}
+
+void dmtcp::DmtcpWorker::startSynchronize()
+{
+  JTRACE("start to Synchronize\n");
+  pthread_mutex_lock(&syncLock);
+}
+
+void dmtcp::DmtcpWorker::waitSynchronize()
+{
+  JTRACE("wait for Synchronize\n");
+  pthread_cond_wait(&syncCond, &syncLock);
+  JTRACE("Synchronized!\n");
+  pthread_mutex_unlock(&syncLock);
 }
 
 void dmtcp::earlyCheckpoint()

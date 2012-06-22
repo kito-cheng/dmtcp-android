@@ -127,6 +127,29 @@ const DmtcpLocalStatus* dmtcpGetLocalStatus();
  */
 int dmtcpRunCommand(char command);
 
+/*
+ *  Synchronize all user program.
+ *  - Returns 1 on success, <=0 on error
+ */
+int dmtcpSynchronize();
+
+/*
+ *  Raise the barrier for dmtcpCheckpointBarrier.
+ *  - Returns 1 on success, <=0 on error
+ */
+int dmtcpRaiseCheckpointBarrier();
+
+/*
+ *  This barrier will block the user thread until checkpoint is finish to make
+ *  precise `checkpoint point`.
+ *
+ *  The user should guarantee the checkpoint will occur between
+ *  dmtcpRaiseCheckpointBarrier and dmtcpCheckpointBarrier.
+ *  Otherwise it's will block the user program forever.
+ *  - Returns 1 on success, <=0 on error
+ */
+int dmtcpCheckpointBarrier();
+
 #ifdef __cplusplus
 } //extern "C"
 #endif

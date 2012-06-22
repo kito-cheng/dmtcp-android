@@ -624,6 +624,24 @@ void dmtcp::DmtcpCoordinator::handleUserCommand(char cmd, DmtcpMessage* reply /*
       }
     }
     break;
+  case 'x': case 'X': /* SYNCHRONIZE */
+    {
+      int order = 0;
+      JTRACE("begin to SYNCHRONIZE");
+      CoordinatorStatus s = getStatus();
+      pthread_mutex_lock(&_syncLock);
+      order = ++_sync;
+      pthread_mutex_unlock(&_syncLock);
+      JTRACE("SYNCHRONIZE order") (order) (s.numPeers);
+
+      if (s.numPeers == _sync) {
+        _sync = 0;
+        JTRACE("release...!") (order);
+        broadcastMessage ( DMT_SYNCHRONIZE );
+      }
+      replyParams[0]=0;
+    }
+    break;
   case ' ': case '\t': case '\n': case '\r':
     //ignore whitespace
     break;

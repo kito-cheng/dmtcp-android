@@ -50,6 +50,9 @@ extern int   __dyn_dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint
                                     ,  DmtcpFunctionPointer postRestart) WEAK;
 extern const DmtcpCoordinatorStatus* __dyn_dmtcpGetCoordinatorStatus() WEAK;
 extern const DmtcpLocalStatus* __dyn_dmtcpGetLocalStatus() WEAK;
+extern int   __dyn_dmtcpSynchronize() WEAK;
+extern int   __dyn_dmtcpRaiseCheckpointBarrier() WEAK;
+extern int   __dyn_dmtcpCheckpointBarrier() WEAK;
 
 //all functions call __dyn##fn if it exists, otherwise return ret
 #define DMTCPAWARE_STUB( fn, args,  ret)\
@@ -103,4 +106,16 @@ int dmtcpInstallHooks( DmtcpFunctionPointer earlyCp
                      , DmtcpFunctionPointer postCp
                      , DmtcpFunctionPointer postRs){
   DMTCPAWARE_STUB( dmtcpInstallHooks, (earlyCp, preCp,postCp,postRs), -128 );
+}
+
+int dmtcpSynchronize() {
+  DMTCPAWARE_STUB( dmtcpSynchronize, (), 0 );
+}
+
+int dmtcpRaiseCheckpointBarrier() {
+  DMTCPAWARE_STUB( dmtcpRaiseCheckpointBarrier, (), 0 );
+}
+
+int dmtcpCheckpointBarrier() {
+  DMTCPAWARE_STUB( dmtcpCheckpointBarrier, (), 0 );
 }

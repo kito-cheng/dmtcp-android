@@ -47,6 +47,8 @@ static DmtcpFunctionPointers userHookPreCheckpoint;
 static DmtcpFunctionPointers userHookPostCheckpoint;
 static DmtcpFunctionPointers userHookPostRestart;
 
+static pthread_mutex_t checkpointBarrier = PTHREAD_MUTEX_INITIALIZER;
+
 //I wish we could use pthreads for the trickery in this file, but much of our
 //code is executed before the thread we want to wake is restored.  Thus we do
 //it the bad way.
@@ -225,6 +227,41 @@ void dmtcp::userHookTrampoline_postCkpt(bool isRestart) {
       (*userHooks)();
     }
   }
+
+  // Unlock the checkpointBarrier !
+  pthread_mutex_unlock(&checkpointBarrier);
+}
+
+int __real_dmtcpSynchronize(){
+  int result[DMTCPMESSAGE_NUM_PARAMS];
+  JTRACE("send SYNCHRONIZE msg");
+  dmtcp::DmtcpWorker::startSynchronize();
+  _runCoordinatorCmd('x',result);
+
+  JTRACE("start SYNCHRONIZE");
+  dmtcp::DmtcpWorker::waitSynchronize();
+  JTRACE("SYNCHRONIZE done");
+  return 1;
+}
+
+int __real_dmtcpRaiseCheckpointBarrier(){
+  /*
+   * Just try lock, to make checkpointBarrier block.
+   */
+  JTRACE("User called dmtcpRaiseCheckpointBarrier");
+  pthread_mutex_trylock(&checkpointBarrier);
+  return 1;
+}
+
+int __real_dmtcpCheckpointBarrier(){
+  /*
+   * Block until checkpoint finish, checkpointBarrier will release in
+   * dmtcp::userHookTrampoline_postCkpt.
+   */
+  JTRACE("User called dmtcpCheckpointBarrier");
+  pthread_mutex_lock(&checkpointBarrier);
+  JTRACE("dmtcpCheckpointBarrier release");
+  return 1;
 }
 
 extern "C" int __dynamic_dmtcpIsEnabled(){
@@ -262,6 +299,15 @@ EXTERNC const DmtcpLocalStatus* __dyn_dmtcpGetLocalStatus(){
   return __real_dmtcpGetLocalStatus();
 }
 
+EXTERNC int __dyn_dmtcpSynchronize(){
+  return __real_dmtcpSynchronize();
+}
+EXTERNC int __dyn_dmtcpRaiseCheckpointBarrier(){
+  return __real_dmtcpRaiseCheckpointBarrier();
+}
+EXTERNC int __dyn_dmtcpCheckpointBarrier(){
+  return __real_dmtcpCheckpointBarrier();
+}
 
 //These dummy trampolines support dynamic linking of user code to libdmtcpaware.so
 EXTERNC int dmtcpIsEnabled(){
@@ -291,4 +337,13 @@ EXTERNC const DmtcpCoordinatorStatus* dmtcpGetCoordinatorStatus(){
 }
 EXTERNC const DmtcpLocalStatus* dmtcpGetLocalStatus(){
   return __real_dmtcpGetLocalStatus();
+}
+EXTERNC int dmtcpSynchronize(){
+  return __real_dmtcpSynchronize();
+}
+EXTERNC int dmtcpRaiseCheckpointBarrier(){
+  return __real_dmtcpRaiseCheckpointBarrier();
+}
+EXTERNC int dmtcpCheckpointBarrier(){
+  return __real_dmtcpCheckpointBarrier();
 }

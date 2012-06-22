@@ -197,6 +197,8 @@ dmtcp::ostream& dmtcp::operator << ( dmtcp::ostream& o, const dmtcp::DmtcpMessag
       OSHIFTPRINTF ( DMT_KILL_PEER )
       OSHIFTPRINTF ( DMT_REJECT )
 
+      OSHIFTPRINTF ( DMT_SYNCHRONIZE )
+
     default:
       JASSERT ( false ) ( s ) .Text ( "Invalid Message Type" );
       //o << s;

@@ -93,8 +93,8 @@ namespace dmtcp
     DMT_FORCE_RESTART,       // force a restart even if not all sockets are reconnected
 
     DMT_KILL_PEER,           // send kill message to peer
-    DMT_REJECT               // coordinator discards incoming connection because it is not from current computation group
-
+    DMT_REJECT,               // coordinator discards incoming connection because it is not from current computation group
+    DMT_SYNCHRONIZE
 
   };
 

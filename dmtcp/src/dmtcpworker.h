@@ -134,6 +134,9 @@ namespace dmtcp
       void writeCheckpointPrefix(int fd);
       void writeTidMaps();
 
+      static void startSynchronize();
+      static void waitSynchronize();
+
     protected:
       void sendUserCommand(char c, int* result = NULL);
     private:

@@ -26,12 +26,19 @@
 #include  "../jalib/jsocket.h"
 #include "nodetable.h"
 #include "dmtcpmessagetypes.h"
+#include <pthread.h>
 
 namespace dmtcp
 {
   class DmtcpCoordinator : public jalib::JMultiSocketProgram
   {
     public:
+      DmtcpCoordinator ()
+        : _sync(0)
+        , _syncLock()
+      {
+         pthread_mutex_init(&_syncLock, NULL);
+      }
       typedef struct { dmtcp::WorkerState minimumState; bool minimumStateUnanimous; int numPeers; } CoordinatorStatus;
 
       virtual void onData ( jalib::JReaderInterface* sock );
@@ -83,6 +90,8 @@ namespace dmtcp
       //map from hostname to checkpoint files
       dmtcp::map< dmtcp::string, dmtcp::vector<dmtcp::string> > _restartFilenames;
       dmtcp::map< pid_t, jalib::JChunkReader* > _virtualPidToChunkReaderMap;
+      volatile int _sync;
+      pthread_mutex_t _syncLock;
   };
 
 }
