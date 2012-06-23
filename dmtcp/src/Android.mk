@@ -89,6 +89,16 @@ include $(CLEAR_VARS)
 LOCAL_C_INCLUDES := external/stlport/stlport \
                     bionic/
 LOCAL_CFLAGS+= $(common_C_FLAGS)
+LOCAL_SRC_FILES := dmtcpaware.c
+
+LOCAL_MODULE := libdmtcpaware
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_HOST_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_C_INCLUDES := external/stlport/stlport \
+                    bionic/
+LOCAL_CFLAGS+= $(common_C_FLAGS)
 LOCAL_SRC_FILES := syscallsreal.c trampolines.cpp
 
 LOCAL_MODULE := libsyscallsreal
