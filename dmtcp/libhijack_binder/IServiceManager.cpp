@@ -48,15 +48,19 @@ static String8 good_old_string(const String16& src)
 }
 
 static void dmtcp_early_checkpoint() {
+  LOGI("dmtcp_early_checkpoint in libhijack_binder, stop process now");
+  IPCThreadState::self()->stopProcess();
+
 }
 
 static void dmtcp_pre_checkpoint() {
 }
 
 static void dmtcp_resume_checkpoint() {
+  LOGI("dmtcp_resume_checkpoint in libhijack_binder");
   if (gDefaultServiceManager != NULL) {
-/*
-    gDefaultServiceManager.clear();*/
+
+    gDefaultServiceManager.clear();
     sp<IBinder> binder = ProcessState::self()->getContextObject(NULL);
     IPCThreadState::self()->clearCallingIdentity();
     IPCThreadState::self()->flushCommands();
@@ -66,7 +70,7 @@ static void dmtcp_resume_checkpoint() {
 
     int ret = binder->pingBinder();
     bool alive = binder->isBinderAlive(); 
-    LOGI("dmtcp_resume_checkpoint %x %d", ret, alive);
+    LOGI("dmtcp_resume_checkpoint %x %d %d", ret, alive, NO_ERROR);
   }
 }
 }
@@ -82,8 +86,10 @@ sp<IServiceManager> defaultServiceManager()
         if (gDefaultServiceManager == NULL) {
             gDefaultServiceManager = interface_cast<IServiceManager>(
                 ProcessState::self()->getContextObject(NULL));
-          dmtcpInstallHooks(dmtcp_early_checkpoint, NULL,
-                            NULL, dmtcp_resume_checkpoint);
+#if 0
+            dmtcpInstallHooks(dmtcp_early_checkpoint, NULL,
+                              dmtcp_resume_checkpoint, dmtcp_resume_checkpoint);
+#endif
         }
     }
     
