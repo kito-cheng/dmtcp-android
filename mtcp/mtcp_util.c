@@ -191,7 +191,17 @@ int mtcp_strendswith (const char *s1, const char *s2)
 __attribute__ ((visibility ("hidden")))
 int mtcp_memcmp(char *dest, const char *src, size_t n)
 {
-  return mtcp_strncmp(dest, src, n);
+  unsigned char c1 = '\0';
+  unsigned char c2 = '\0';
+
+  while (n > 0) {
+    c1 = (unsigned char) *dest++;
+    c2 = (unsigned char) *src++;
+    if (c1 != c2)
+      return c1 - c2;
+    n--;
+  }
+  return c1 - c2;
 }
 
 __attribute__ ((visibility ("hidden")))
