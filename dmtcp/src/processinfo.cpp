@@ -217,7 +217,11 @@ void dmtcp::ProcessInfo::refresh()
   _pid = getpid();
   _ppid = getppid();
   _gid = getpgid(0);
+#ifdef ANDROID
+  _sid = -1;
+#else
   _sid = getsid(0);
+#endif
 
   _fgid = -1;
   dmtcp::string controllingTerm = jalib::Filesystem::GetControllingTerm();
