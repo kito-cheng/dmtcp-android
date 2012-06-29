@@ -100,7 +100,7 @@
 #define STALE_SOCKET_HANDLING /**/
 
 /* Record timing information to stderr and jtimings.csv */
-/* #undef TIMING */
+#define TIMING
 
 /* Use unique filenames for checkpoint images */
 /* #undef UNIQUE_CHECKPOINT_FILENAMES */
