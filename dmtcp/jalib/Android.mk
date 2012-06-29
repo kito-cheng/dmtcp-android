@@ -10,7 +10,6 @@ LOCAL_SRC_FILES:= jalib.cpp jassert.cpp jfilesystem.cpp \
                   jserialize.cpp jtimer.cpp
 
 LOCAL_MODULE := libjal
-#LOCAL_SHARED_LIBRARIES := libstlport
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_STATIC_LIBRARY)
