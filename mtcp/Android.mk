@@ -2,13 +2,22 @@ LOCAL_PATH:= $(call my-dir)
 
 MTCP_LOCAL_CFLAGS:=-DHIGHEST_VA='(VA)0xffffe000' -fno-stack-protector
 common_C_FLAGS :=  -DDEBUG -DTIMING -g3 -O0
+ifeq ($(ARCH_ARM_HAVE_TLS_REGISTER),true)
+  common_C_FLAGS += -DHAVE_ARM_TLS_REGISTER
+endif
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= mtcp.c mtcp_restart_nolibc.c \
         mtcp_maybebpt.c mtcp_printf.c mtcp_util.c \
         mtcp_safemmap.c mtcp_safe_open.c \
         mtcp_state.c mtcp_check_vdso.c mtcp_sigaction.c mtcp_fastckpt.c \
-        getcontest-x86.S setcontest-x86.S clone-x86.S \
         bionic_pthread_r.c
+
+ifeq ($(TARGET_ARCH),arm)
+LOCAL_SRC_FILES += clone-arm.S libc-do-syscall-arm-eabi.S
+endif
+ifeq ($(TARGET_ARCH),x86)
+LOCAL_SRC_FILES += getcontest-x86.S setcontest-x86.S clone-x86.S
+endif
 #        bionic_pthread.c
 
 LOCAL_C_INCLUDES := bionic/libc/private/ \
@@ -22,35 +31,18 @@ else
 endif
 LOCAL_CFLAGS+= $(MTCP_LOCAL_CFLAGS)
 LOCAL_CFLAGS+= $(common_C_FLAGS)
-LOCAL_LDFLAGS:= -T $(LOCAL_PATH)/mtcp.t -Wl,-Map,$(LOCAL_PATH)/mtcp.map
+ifeq ($(TARGET_ARCH),arm)
+LOCAL_CFLAGS += -DUSE_PROC_MAPS
+endif
+ifeq ($(TARGET_ARCH),x86)
+LOCAL_LDFLAGS:= -Wl,-T,$(LOCAL_PATH)/mtcp.x86.t
+endif
+LOCAL_LDFLAGS+= -Wl,-Map,$(LOCAL_PATH)/mtcp.map
 LOCAL_MODULE := libmtcp
 LOCAL_SHARED_LIBRARIES := libc libdl
-LOCAL_STATIC_LIBRARIES := liblog
+#LOCAL_STATIC_LIBRARIES := liblog
 LOCAL_MODULE_TAGS := optional
 
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
-# Define ANDROID_SMP appropriately.
-ifeq ($(TARGET_CPU_SMP),true)
-    LOCAL_CFLAGS += -DANDROID_SMP=1
-else
-    LOCAL_CFLAGS += -DANDROID_SMP=0
-endif
-LOCAL_C_INCLUDES := bionic/libc/private/ \
-                    bionic/libc/bionic/ \
-                    external/dmtcp/dmtcp/src \
-
-LOCAL_SRC_FILES:= bionic_pthread_hj.c \
-                  bionic_pthread-rwlocks.c \
-                  bionic_pthread-timers.c \
-                  bionic_pthread-atfork.c \
-                  bionic_fork.c \
-                  bionic_pthread_clone-x86.S
-
-LOCAL_MODULE := libhijack_pthread
-LOCAL_SHARED_LIBRARIES := libdl
-LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -65,8 +57,11 @@ LOCAL_SRC_FILES := mtcp_restart.c \
         mtcp_printf.c mtcp_util.c mtcp_maybebpt.c \
         mtcp_safemmap.c mtcp_state.c mtcp_safe_open.c \
         mtcp_check_vdso.c mtcp_fastckpt.c
+ifeq ($(TARGET_ARCH),arm)
+LOCAL_SRC_FILES += libc-do-syscall-arm-eabi.S
+endif
 LOCAL_CFLAGS+= $(MTCP_LOCAL_CFLAGS) $(common_C_FLAGS)
-LOCAL_STATIC_LIBRARIES := liblog
+#LOCAL_STATIC_LIBRARIES := liblog
 LOCAL_MODULE := mtcp_restart
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)

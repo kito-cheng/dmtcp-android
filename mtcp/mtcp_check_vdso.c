@@ -56,6 +56,11 @@ typedef struct
 #include "mtcp_sys.h" // For CLEAN_FOR_64BIT; for mtcp_sys_kernel_set_tls (ARM)
 #include "mtcp_internal.h" // For CLEAN_FOR_64BIT and PATH_MAX
 
+#ifdef ANDROID
+#ifndef AT_SYSINFO
+#define AT_SYSINFO 32
+#endif
+#endif
 
 #ifdef __x86_64__
 # define ELF_AUXV_T Elf64_auxv_t

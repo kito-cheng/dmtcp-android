@@ -105,6 +105,7 @@
 #include <pthread_internal.h>
 #include <asm/sigcontext.h>
 
+#ifdef __i386__
 struct ucontext {
     unsigned long     uc_flags;
     struct ucontext  *uc_link;
@@ -117,8 +118,7 @@ typedef struct ucontext ucontext_t;
 
 extern int getcontext (ucontext_t *__ucp);
 extern int setcontext (const ucontext_t *__ucp);
-//#define getcontext(x) 0
-//#define setcontext(x) 0
+#endif
 
 static inline int sigandset(sigset_t *dest, sigset_t *left, sigset_t *right) {
     sigset_t *__dest = (dest);
@@ -163,7 +163,13 @@ if (DEBUG_RESTARTING) \
 # elif __arm__
 // #define SAVEDSP uc_mcontext.arm_sp
 // In glibc-ports-2.14/sysdeps/arm/eabi/jmpbuf-offsets.h, __JMP_BUF_SP = 8
+#ifndef ANDROID
 #  define SAVEDSP 8
+#else
+// 13 = r13 = SP
+//  4 = r0 ~r3 = caller-save register
+#  define SAVEDSP (_JB_CORE_BASE+13-4)
+#endif
 # else
 #  error "register for stack pointer not defined"
 # endif
@@ -182,7 +188,11 @@ if (DEBUG_RESTARTING) \
 
 #ifdef SETJMP
 // In field of 'struct Thread':
+#ifndef ANDROID
 # define JMPBUF_SP jmpbuf[0].__jmpbuf[SAVEDSP]
+#else
+# define JMPBUF_SP jmpbuf[SAVEDSP]
+#endif
 #else
 // In field of 'struct Thread':
 #ifndef ANDROID
@@ -3322,6 +3332,9 @@ static void writememoryarea (int fd, Area *area, int stack_was_seen,
   else if (0 == strcmp(area -> name, "[vsyscall]") && !stack_was_seen)
     DPRINTF("skipping over [vsyscall] section"
     	    " %p at %p\n", area -> size, area -> addr);
+  else if (0 == strcmp(area -> name, "[vectors]") && !stack_was_seen)
+    DPRINTF("skipping over [vectors] section"
+            " %p at %p\n", area -> size, area -> addr);
   else if (0 == strcmp(area -> name, "[stack]") &&
 	   orig_stack != area -> addr + area -> size)
     /* Kernel won't let us munmap this.  But we don't need to restore it. */
@@ -3351,7 +3364,8 @@ static void writememoryarea (int fd, Area *area, int stack_was_seen,
      */
     mtcp_write_non_rwx_pages(fd, area);
   } else if ( 0 != strcmp(area -> name, "[vsyscall]")
-         && ( (0 != strcmp(area -> name, "[vdso]")
+         && ( ((   0 != strcmp(area -> name, "[vdso]")
+                && 0 != strcmp(area -> name, "[vectors]"))
                || vsyscall_exists /* which implies vdso can be overwritten */
                || !stack_was_seen ))) /* If vdso appeared before stack, it can be
                                          replaced */
@@ -3367,6 +3381,7 @@ static void writememoryarea (int fd, Area *area, int stack_was_seen,
         (strstr(area->name, "(deleted)") == NULL) &&
         ((0 != strcmp(area -> name, "[vsyscall]"))) &&
         ((0 != strcmp(area -> name, "[vdso]"))) &&
+        ((0 != strcmp(area -> name, "[vectors]"))) &&
         ((area->prot & PROT_WRITE) == 0)) {
       int diff_fd = mtcp_sys_open(area->name, O_RDONLY, 0);
       /* We need to take care about the end of file-mapped memory region
@@ -4540,7 +4555,7 @@ static int restarthread (void *threadv)
 #ifndef ANDROID
     pid_t tid = (*clone_entry)(restarthread,
                                // -128 for red zone
-                               (void*)(child -> JMPBUF_SP - 128), // -128 for red zone
+                               (void*)(child -> JMPBUF_SP - 128),
                                /* Don't do CLONE_SETTLS (it'll puke).  We do it
                                 * later via restore_tls_state. */
                                ((child -> clone_flags & ~CLONE_SETTLS) |
@@ -4552,14 +4567,9 @@ static int restarthread (void *threadv)
     pid_t tid = __pthread_clone_r(restarthread,
                                // -128 for red zone
                                (void*)(child -> JMPBUF_SP - 128),
-                               //child ->tls,
                                (child -> clone_flags & ~CLONE_SETTLS),
                                clone_arg);
-/*
-    pid_t tid = (*sys_clone_entry)(restarthread,(void*)(child -> JMPBUF_SP - 128),
-                                   (child -> clone_flags & ~CLONE_SETTLS),
-                                   clone_arg, NULL);
-*/
+
 #endif
     if (tid < 0) {
       MTCP_PRINTF("error %d recreating thread\n", errno);
