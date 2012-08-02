@@ -61,6 +61,13 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp_fork.c
+LOCAL_CFLAGS+= $(common_C_FLAGS)
+LOCAL_MODULE := dmtcp_fork
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
 LOCAL_C_INCLUDES := external/dmtcp/dmtcp/src
 LOCAL_SRC_FILES := dmtcpaware1.c
 LOCAL_CFLAGS+= $(common_C_FLAGS)
