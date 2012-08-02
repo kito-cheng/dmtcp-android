@@ -39,7 +39,7 @@ LOCAL_LDFLAGS:= -Wl,-T,$(LOCAL_PATH)/mtcp.x86.t
 endif
 LOCAL_LDFLAGS+= -Wl,-Map,$(LOCAL_PATH)/mtcp.map
 LOCAL_MODULE := libmtcp
-LOCAL_SHARED_LIBRARIES := libc libdl
+LOCAL_SYSTEM_SHARED_LIBRARIES := libc libdl
 #LOCAL_STATIC_LIBRARIES := liblog
 LOCAL_MODULE_TAGS := optional
 
@@ -62,6 +62,7 @@ LOCAL_SRC_FILES += libc-do-syscall-arm-eabi.S
 endif
 LOCAL_CFLAGS+= $(MTCP_LOCAL_CFLAGS) $(common_C_FLAGS)
 #LOCAL_STATIC_LIBRARIES := liblog
+LOCAL_SYSTEM_SHARED_LIBRARIES := libc
 LOCAL_MODULE := mtcp_restart
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
