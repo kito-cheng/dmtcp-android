@@ -267,8 +267,7 @@ void initialize_libpthread_wrappers()
 {
   if (!_libpthread_wrappers_initialized) {
     dmtcp_setThreadPerformingDlopenDlsym();
-    //void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
-    void *pthread_handle = _real_dlopen("libc.so", RTLD_NOW);
+    void *pthread_handle = _real_dlopen(LIBPTHREAD_FILENAME, RTLD_NOW);
     dmtcp_unsetThreadPerformingDlopenDlsym();
 
     if (pthread_handle == NULL) {
