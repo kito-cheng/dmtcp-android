@@ -323,8 +323,10 @@ void dmtcp::TcpConnection::onConnect( int sockfd,
   if (really_verbose) {
     JTRACE ( "Connecting." ) ( id() );
   }
+#ifndef ANDROID
   JASSERT ( tcpType() == TCP_CREATED ) ( tcpType() ) ( id() )
     .Text ( "Connecting with an in-use socket????" );
+#endif
 
   /* socketpair wrapper calls onConnect with sockfd == -1 and addr == NULL */
   if (addr != NULL && _isBlacklistedTcp(sockfd, addr, len)) {
