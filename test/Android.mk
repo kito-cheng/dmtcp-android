@@ -3,6 +3,14 @@ LOCAL_PATH:= $(call my-dir)
 common_C_FLAGS := -O0 -g3 -DDEBUG -DTIMING
 
 include $(CLEAR_VARS)
+LOCAL_SRC_FILES := dmtcp-tls.cpp
+LOCAL_CFLAGS+= $(common_C_FLAGS)
+LOCAL_MODULE := dmtcp-tls
+LOCAL_SHARED_LIBRARIES := libdl
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
 LOCAL_SRC_FILES := testdmtcp-ashmem.c
 LOCAL_CFLAGS+= $(common_C_FLAGS)
 LOCAL_MODULE := testdmtcp-ashmem
@@ -136,7 +144,7 @@ LOCAL_CFLAGS+= $(common_C_FLAGS)
 LOCAL_SHARED_LIBRARIES := libbinder
 LOCAL_MODULE := dmtcp-binder
 LOCAL_MODULE_TAGS := optional
-include $(BUILD_EXECUTABLE)
+#include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := dmtcp-binder-server.cpp
@@ -158,4 +166,4 @@ LOCAL_SHARED_LIBRARIES += \
     libbinder
 LOCAL_MODULE := dmtcp-binder-server
 LOCAL_MODULE_TAGS := optional
-include $(BUILD_EXECUTABLE)
+#include $(BUILD_EXECUTABLE)
