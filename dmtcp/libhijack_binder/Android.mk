@@ -31,21 +31,24 @@ sources := \
     ProcessState.cpp \
     Static.cpp
 
+ifeq ($(TARGET_USES_ION),true)
+    sources += MemoryHeapIon.cpp
+endif
+
+
 LOCAL_PATH:= $(call my-dir)
 
+# Note about gingerbread compatibility : Require a global cflag,
+# several projects use binder's IMemory.h and MemoryHeapBase.h
+# COMMON_GLOBAL_CFLAGS += -DBINDER_COMPAT
+
 include $(CLEAR_VARS)
+LOCAL_LDLIBS += -lpthread
 LOCAL_MODULE := libhijack_binder
 LOCAL_C_INCLUDES := external/dmtcp/dmtcp/src
 LOCAL_SHARED_LIBRARIES := libdmtcpaware liblog libcutils libutils
-LOCAL_CFLAGS += -DLOG_NDEBUG=0
+#LOCAL_CFLAGS += -DLOG_NDEBUG=0
 LOCAL_SRC_FILES := $(sources)
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
-include $(CLEAR_VARS)
-LOCAL_MODULE := libhijack_binder
-LOCAL_C_INCLUDES := external/dmtcp/dmtcp/src
-LOCAL_SRC_FILES := $(sources)
-LOCAL_CFLAGS += -DLOG_NDEBUG=0
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_STATIC_LIBRARY)

@@ -17,6 +17,7 @@
 #define LOG_TAG "Parcel"
 //#define LOG_NDEBUG 0
 
+#define _INTERNAL_BINDER_PARCEL_
 #include <binder/Parcel.h>
 
 #include <binder/IPCThreadState.h>
@@ -447,6 +448,12 @@ status_t Parcel::appendFrom(const Parcel *parcel, size_t offset, size_t len)
     return err;
 }
 
+extern "C" Parcel *_ZN7android6Parcel10appendFromEPKS0_jj(Parcel *This, const Parcel *parcel, size_t offset, size_t len);
+extern "C" Parcel *_ZN7android6Parcel10appendFromEPS0_jj(Parcel *This, Parcel *parcel, size_t offset, size_t len)
+{
+    return _ZN7android6Parcel10appendFromEPKS0_jj(This, parcel, offset, len);
+}
+
 bool Parcel::pushAllowFds(bool allowFds)
 {
     const bool origValue = mAllowFds;
@@ -478,9 +485,15 @@ status_t Parcel::writeInterfaceToken(const String16& interface)
     return writeString16(interface);
 }
 
+bool Parcel::enforceInterface(const String16& interface) const
+{
+	return enforceInterface(interface,NULL);
+}
+
+
 bool Parcel::checkInterface(IBinder* binder) const
 {
-    return enforceInterface(binder->getInterfaceDescriptor());
+    return enforceInterface(binder->getInterfaceDescriptor(),NULL);
 }
 
 bool Parcel::enforceInterface(const String16& interface,
@@ -1047,10 +1060,11 @@ int32_t Parcel::readExceptionCode() const
 {
   int32_t exception_code = readAligned<int32_t>();
   if (exception_code == EX_HAS_REPLY_HEADER) {
+    int32_t header_start = dataPosition();
     int32_t header_size = readAligned<int32_t>();
     // Skip over fat responses headers.  Not used (or propagated) in
     // native code
-    setDataPosition(dataPosition() + header_size);
+    setDataPosition(header_start + header_size);
     // And fat response headers are currently only used when there are no
     // exceptions, so return no error:
     return 0;

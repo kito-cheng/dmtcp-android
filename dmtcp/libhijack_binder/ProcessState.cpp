@@ -103,7 +103,7 @@ sp<IBinder> ProcessState::getContextObject(const String16& name, const sp<IBinde
         mContexts.indexOfKey(name) >= 0 ? mContexts.valueFor(name) : NULL);
     mLock.unlock();
     
-    printf("Getting context object %s for %p\n", String8(name).string(), caller.get());
+    //printf("Getting context object %s for %p\n", String8(name).string(), caller.get());
     
     if (object != NULL) return object;
 
