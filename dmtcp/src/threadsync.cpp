@@ -38,6 +38,7 @@
 #include "../jalib/jfilesystem.h"
 
 #ifdef ANDROID
+#include "tls.h"
 #define PTHREAD_RWLOCK_WRITER_NONRECURSIVE_INITIALIZER_NP \
         PTHREAD_RWLOCK_INITIALIZER
 #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP \
@@ -98,12 +99,27 @@ static __thread bool _sendCkptSignalOnFinalUnlock = false;
 static __thread bool _isOkToGrabWrapperExecutionLock = true;
 static __thread bool _hasThreadFinishedInitialization = false;
 #else
-static int _wrapperExecutionLockLockCount = 0;
-static int _threadCreationLockLockCount = 0;
-static bool _threadPerformingDlopenDlsym = false;
-static bool _sendCkptSignalOnFinalUnlock = false;
-static bool _isOkToGrabWrapperExecutionLock = true;
-static bool _hasThreadFinishedInitialization = false;
+/* Pack as a struct since the TLS data slot is poor in Android */
+struct TLSData{
+  int _wrapperExecutionLockLockCount;
+  int _threadCreationLockLockCount;
+  bool _threadPerformingDlopenDlsym;
+  bool _sendCkptSignalOnFinalUnlock;
+  bool _isOkToGrabWrapperExecutionLock;
+  bool _hasThreadFinishedInitialization;
+};
+
+static TLSData &getTLSData() {
+  static dmtcp::TLS<TLSData> tlsData = TLSData{0, 0, false, false, true, false};
+  return tlsData;
+}
+#define _wrapperExecutionLockLockCount  getTLSData()._wrapperExecutionLockLockCount
+#define _threadCreationLockLockCount getTLSData()._threadCreationLockLockCount
+#define _threadPerformingDlopenDlsym getTLSData()._threadPerformingDlopenDlsym
+#define _sendCkptSignalOnFinalUnlock getTLSData()._sendCkptSignalOnFinalUnlock
+#define _isOkToGrabWrapperExecutionLock getTLSData()._isOkToGrabWrapperExecutionLock
+#define _hasThreadFinishedInitialization getTLSData()._hasThreadFinishedInitialization
+
 #endif
 
 

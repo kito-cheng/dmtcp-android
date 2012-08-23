@@ -20,6 +20,7 @@ LOCAL_SRC_FILES:=  connectionstate.cpp \
         binderconnection.cpp \
         androidconnection.cpp \
         threadsync.cpp \
+        tls.cpp
 
 LOCAL_MODULE := libdmtcpinternal
 LOCAL_MODULE_TAGS := optional
