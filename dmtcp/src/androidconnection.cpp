@@ -277,6 +277,7 @@ void dmtcp::AshmemConnection::postCheckpoint ( const dmtcp::vector<int>& fds,
     } else {
       _real_ioctl(fds[0], ASHMEM_UNPIN, &pin);
     }
+    _real_close(fds[0]);
   }
 }
 void dmtcp::AshmemConnection::restore ( const dmtcp::vector<int>& fds,
