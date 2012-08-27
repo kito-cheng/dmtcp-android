@@ -303,9 +303,9 @@ static int STATIC_TLS_TID_OFFSET()
 # endif
 #endif
 
+#ifndef ANDROID
 # define STATIC_TLS_PID_OFFSET() (STATIC_TLS_TID_OFFSET() + sizeof(pid_t))
 
-#ifndef ANDROID
 #if 1
 /* WHEN WE HAVE CONFIDENCE IN THIS VERSION, REMOVE ALL OTHER __GLIBC_PREREQ
  * AND MAKE THIS THE ONLY VERSION.  IT SHOULD BE BACKWARDS COMPATIBLE.
@@ -396,9 +396,9 @@ static int TLS_PID_OFFSET(void) {
 }
 #endif
 #else /* ANDROID */
-#define TLS_TID_OFFSET() offsetof(struct pthread_internal_t,kernel_id)
-#define TLS_PID_OFFSET() TLS_TID_OFFSET()
-#define mtcp_get_tls_base_addr() (((void**)__get_tls())[TLS_SLOT_THREAD_ID])
+#define TLS_TID_OFFSET() (4) /* The TID in __get_tls()[1] */
+//#define TLS_PID_OFFSET() TLS_TID_OFFSET()
+#define mtcp_get_tls_base_addr() ((void**)__get_tls())
 #endif
 
 /* this call to gettid is hijacked by DMTCP for PID/TID-Virtualization */
@@ -861,6 +861,7 @@ void mtcp_init (char const *checkpointfilename,
   }
 #else
   {
+#if 0
     pid_t tls_tid ;
     tls_tid = *(pid_t *) (((unsigned char*)mtcp_get_tls_base_addr()) + TLS_TID_OFFSET());
     if ((tls_tid != motherpid)) {
@@ -869,6 +870,7 @@ void mtcp_init (char const *checkpointfilename,
       /* manual update in Android for workaround */
       *(pid_t *) (((unsigned char*)mtcp_get_tls_base_addr()) + TLS_TID_OFFSET()) = motherpid;
     }
+#endif
   }
 #endif
 
@@ -1325,10 +1327,13 @@ void mtcp_thread_start(void *threadv)
    * The solution is to put the motherpid in the tid slot everytime a new
    * thread is created to make sure that struct pthread has the correct value.
    */
+#ifndef ANDROID
+  /* Bionic/Android don't provide PID slot in TLS ! */
   {
     pid_t  *tls_pid = (pid_t *) (mtcp_get_tls_base_addr() + TLS_PID_OFFSET());
     *tls_pid = motherpid;
   }
+#endif
 
   setupthread (thread);
 
@@ -4020,7 +4025,6 @@ static void save_tls_state (Thread *thisthread)
     mtcp_abort ();
   }
 #endif
-  DPRINTF("Store tls for %d %d", thisthread->tid, __get_tls());
 }
 
 static char *memsubarray (char *array, char *subarray, int len) {
@@ -4625,6 +4629,7 @@ static void restore_tls_state (Thread *thisthread)
    * near the beginning
    */
 #ifndef ANDROID
+  /* Bionic/Android don't provide PID slot in TLS ! */
   *(pid_t *)(*(unsigned long *)&(thisthread -> gdtentrytls[0].base_addr)
              + TLS_PID_OFFSET()) = motherpid;
 #endif
@@ -4678,7 +4683,6 @@ static void restore_tls_state (Thread *thisthread)
 #endif
 
   thisthread -> tid = mtcp_sys_kernel_gettid ();
-  DPRINTF("Restore tls for %d %d", thisthread->tid, __get_tls());
 }
 
 /*****************************************************************************
