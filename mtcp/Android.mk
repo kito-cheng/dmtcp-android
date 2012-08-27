@@ -14,6 +14,7 @@ LOCAL_SRC_FILES:= mtcp.c mtcp_restart_nolibc.c \
 
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_SRC_FILES += clone-arm.S libc-do-syscall-arm-eabi.S
+common_C_FLAGS += -D__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
 endif
 ifeq ($(TARGET_ARCH),x86)
 LOCAL_SRC_FILES += getcontest-x86.S setcontest-x86.S clone-x86.S
