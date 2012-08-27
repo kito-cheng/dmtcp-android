@@ -6,6 +6,12 @@ include $(CLEAR_VARS)
 LOCAL_C_INCLUDES := external/stlport/stlport \
                     bionic/
 LOCAL_CFLAGS+= $(common_C_FLAGS)
+# Define ANDROID_SMP appropriately.
+ifeq ($(TARGET_CPU_SMP),true)
+    LOCAL_CFLAGS += -DANDROID_SMP=1
+else
+    LOCAL_CFLAGS += -DANDROID_SMP=0
+endif
 LOCAL_SRC_FILES:=  connectionstate.cpp \
         connection.cpp connectionidentifier.cpp \
         connectionmanager.cpp connectionrewirer.cpp \
@@ -20,7 +26,7 @@ LOCAL_SRC_FILES:=  connectionstate.cpp \
         binderconnection.cpp \
         androidconnection.cpp \
         threadsync.cpp \
-        tls.cpp
+        tls.cpp \
 
 LOCAL_MODULE := libdmtcpinternal
 LOCAL_MODULE_TAGS := optional

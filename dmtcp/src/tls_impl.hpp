@@ -36,7 +36,7 @@ namespace dmtcp {
     : _tlsKey(0)
     , _default()
   {
-    TLSUtils::pthread_key_create(&_tlsKey, NULL);
+    TLSUtils::pthread_key_create(&_tlsKey, deallocate);
   }
 
   template<class T>
@@ -44,24 +44,13 @@ namespace dmtcp {
     : _tlsKey(0)
     , _default(val)
   {
-    TLSUtils::pthread_key_create(&_tlsKey, NULL);
+    TLSUtils::pthread_key_create(&_tlsKey, deallocate);
   }
 
   template<class T>
   TLS<T>::~TLS() {
     T *data = get();
     TLSUtils::pthread_key_delete(_tlsKey);
-  }
-
-  template<class T>
-  T *TLS<T>::get() {
-    T *data = (T *)TLSUtils::pthread_getspecific(_tlsKey);
-    if (data == NULL) {
-      data = TLS<T>::malloc();
-      *data = _default;
-      TLSUtils::pthread_setspecific(_tlsKey, (void*)data);
-    }
-    return data;
   }
 
   template<class T>
@@ -78,14 +67,15 @@ namespace dmtcp {
   }
 
   template<class T>
-  const T *TLS<T>::get() const {
-    T *data = (T *)TLSUtils::pthread_getspecific(_tlsKey);
+  T *TLS<T>::get() const {
+    typename TLSAllocator::Item *data =
+      (typename TLSAllocator::Item *)TLSUtils::pthread_getspecific(_tlsKey);
     if (data == NULL) {
-      data = TLS<T>::malloc();
-      *data = _default;
+      data = allocator().alloc();
+      data->_obj = _default;
       TLSUtils::pthread_setspecific(_tlsKey, (void*)data);
     }
-    return data;
+    return &data->_obj;
   }
 
   template<class T>
@@ -102,9 +92,14 @@ namespace dmtcp {
   }
 
   template<class T>
-  T *TLS<T>::malloc() {
-    static int idx = 0;
-    static T tls_storage[1024];
-    return &tls_storage[idx++];
+  typename TLS<T>::TLSAllocator &TLS<T>::allocator() {
+    static TLSAllocator _allocator;
+    return _allocator;
+  }
+  template<class T>
+  void TLS<T>::deallocate(void *data) {
+    typename TLSAllocator::Item *freeItem
+      = (typename TLSAllocator::Item *)data;
+    TLS<T>::allocator().free(freeItem);
   }
 }

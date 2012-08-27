@@ -23,6 +23,7 @@
 #define TLS_H
 
 #include <pthread.h>
+#include "tls_allocator.hpp"
 
 namespace dmtcp
 {
@@ -38,11 +39,12 @@ namespace dmtcp
       operator const T&() const;
       const T &operator=(const T &val) const;
     private:
-      T *get();
-      const T *get() const;
+      typedef Allocator<T, 2048> TLSAllocator;
+      T *get() const;
       pthread_key_t _tlsKey;
       T _default;
-      static T *malloc();
+      static TLSAllocator &allocator();
+      static void deallocate(void *data);
   };
 }
 
