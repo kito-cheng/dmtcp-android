@@ -53,6 +53,9 @@ extern const DmtcpLocalStatus* __dyn_dmtcpGetLocalStatus() WEAK;
 extern int   __dyn_dmtcpSynchronize() WEAK;
 extern int   __dyn_dmtcpRaiseCheckpointBarrier() WEAK;
 extern int   __dyn_dmtcpCheckpointBarrier() WEAK;
+extern int   __dyn_dmtcpBlockBinder() WEAK;
+extern int   __dyn_dmtcpUnblockBinder() WEAK;
+extern int   __dyn_dmtcpIsBlockBinder() WEAK;
 
 //all functions call __dyn##fn if it exists, otherwise return ret
 #define DMTCPAWARE_STUB( fn, args,  ret)\
@@ -118,4 +121,16 @@ int dmtcpRaiseCheckpointBarrier() {
 
 int dmtcpCheckpointBarrier() {
   DMTCPAWARE_STUB( dmtcpCheckpointBarrier, (), 0 );
+}
+
+int dmtcpBlockBinder() {
+  DMTCPAWARE_STUB( dmtcpBlockBinder, (), 0 );
+}
+
+int dmtcpUnblockBinder() {
+  DMTCPAWARE_STUB( dmtcpUnblockBinder, (), 0 );
+}
+
+int dmtcpIsBlockBinder() {
+  DMTCPAWARE_STUB( dmtcpIsBlockBinder, (), 0 );
 }

@@ -608,3 +608,15 @@ void dmtcp::ThreadSync::waitForUserThreadsToFinishPreResumeCB()
     JASSERT(false) .Text("Failed to release preResumeThreadCountLock");
   }
 }
+
+static volatile bool binderBlock = false;
+void dmtcp::ThreadSync::setBlockBinder(bool b)
+{
+  binderBlock = b;
+  JTRACE("dmtcp::ThreadSync::setBlockBinder") (binderBlock);
+}
+
+bool dmtcp::ThreadSync::isBlockBinder()
+{
+  return binderBlock;
+}

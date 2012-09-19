@@ -69,6 +69,13 @@
 // ---------------------------------------------------------------------------
 
 namespace android {
+static bool dmtcpDone = false;
+static void sleepUntilCheckpointDone() {
+  while (!dmtcpDone && dmtcpIsBlockBinder()) {
+    sleep(1);
+  }
+  dmtcpDone = true;
+}
 
 static const char* getReturnString(size_t idx);
 static const char* getCommandString(size_t idx);
@@ -506,7 +513,6 @@ status_t IPCThreadState::transact(int32_t handle,
                                   uint32_t code, const Parcel& data,
                                   Parcel* reply, uint32_t flags)
 {
-    dmtcpDelayCheckpointsLock();
     status_t err = data.errorCheck();
 
     flags |= TF_ACCEPT_FDS;
@@ -526,7 +532,6 @@ status_t IPCThreadState::transact(int32_t handle,
     
     if (err != NO_ERROR) {
         if (reply) reply->setError(err);
-        dmtcpDelayCheckpointsUnlock();
         return (mLastError = err);
     }
     
@@ -563,7 +568,6 @@ status_t IPCThreadState::transact(int32_t handle,
         err = waitForResponse(NULL, NULL);
     }
     
-    dmtcpDelayCheckpointsUnlock();
     return err;
 }
 
@@ -756,6 +760,10 @@ finish:
 
 status_t IPCThreadState::talkWithDriver(bool doReceive)
 {
+    if (doReceive) {
+      sleepUntilCheckpointDone();
+    }
+
     LOG_ASSERT(mProcess->mDriverFD >= 0, "Binder driver is not opened");
     
     binder_write_read bwr;

@@ -50,6 +50,7 @@
 #include <linux/ashmem.h>
 #include <linux/binder.h>
 #endif
+#include "threadsync.h"
 
 
 ////////////
@@ -139,6 +140,12 @@ void dmtcp::BinderConnection::mergeWith ( const Connection& that ) {
 
 void dmtcp::BinderConnection::restartDup2(int oldFd, int newFd) {
   restore(dmtcp::vector<int>(1,newFd), NULL);
+}
+
+static void blockBinder() {
+  while (dmtcp::ThreadSync::isBlockBinder()) {
+    sleep(1);
+  }
 }
 
 int dmtcp::BinderConnection::ioctl(int fd, int request, va_list args) {

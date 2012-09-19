@@ -153,19 +153,30 @@ const DmtcpCoordinatorStatus* __real_dmtcpGetCoordinatorStatus(){
 
 const DmtcpLocalStatus* __real_dmtcpGetLocalStatus(){
   //these must be static so their memory is not deleted.
+#ifndef ANDROID
   static dmtcp::string ckpt;
   static dmtcp::string pid;
+#endif
   static DmtcpLocalStatus status;
+#ifndef ANDROID
   ckpt.reserve(1024);
+#endif
 
   //get filenames
+#ifndef ANDROID
   pid=dmtcp::UniquePid::ThisProcess().toString();
   ckpt=dmtcp::UniquePid::getCkptFilename();
+#endif
 
   status.numCheckpoints          = numCheckpoints;
   status.numRestarts             = numRestarts;
+#ifndef ANDROID
   status.checkpointFilename      = ckpt.c_str();
   status.uniquePidStr            = pid.c_str();
+#else
+  status.checkpointFilename      = NULL;
+  status.uniquePidStr            = NULL;
+#endif
   return &status;
 }
 
@@ -264,6 +275,20 @@ int __real_dmtcpCheckpointBarrier(){
   return 1;
 }
 
+int __real_dmtcpBlockBinder() {
+  dmtcp::ThreadSync::setBlockBinder(true);
+  return 1;
+}
+
+int __real_dmtcpUnblockBinder() {
+  dmtcp::ThreadSync::setBlockBinder(false);
+  return 1;
+}
+
+int __real_dmtcpIsBlockBinder() {
+  return dmtcp::ThreadSync::isBlockBinder();
+}
+
 extern "C" int __dynamic_dmtcpIsEnabled(){
   return 3;
 }
@@ -307,6 +332,18 @@ EXTERNC int __dyn_dmtcpRaiseCheckpointBarrier(){
 }
 EXTERNC int __dyn_dmtcpCheckpointBarrier(){
   return __real_dmtcpCheckpointBarrier();
+}
+
+EXTERNC int __dyn_dmtcpBlockBinder() {
+  return __real_dmtcpBlockBinder();
+}
+
+EXTERNC int __dyn_dmtcpUnblockBinder() {
+  return __real_dmtcpUnblockBinder();
+}
+
+EXTERNC int __dyn_dmtcpIsBlockBinder() {
+  return __real_dmtcpIsBlockBinder();
 }
 
 //These dummy trampolines support dynamic linking of user code to libdmtcpaware.so

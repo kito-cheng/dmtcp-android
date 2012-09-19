@@ -106,6 +106,9 @@ namespace dmtcp
     void incrNumUserThreads();
     void processPreResumeCB();
     void waitForUserThreadsToFinishPreResumeCB();
+
+    void setBlockBinder(bool b);
+    bool isBlockBinder();
   };
 }
 

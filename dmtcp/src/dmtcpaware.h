@@ -150,6 +150,15 @@ int dmtcpRaiseCheckpointBarrier();
  */
 int dmtcpCheckpointBarrier();
 
+int dmtcpBlockBinder();
+int dmtcpUnblockBinder();
+int dmtcpIsBlockBinder();
+
+/*
+ * Stop dmtcp and disconnect with dmtcp_coordinator!
+ */
+int dmtcpShutdown();
+
 #ifdef __cplusplus
 } //extern "C"
 #endif
