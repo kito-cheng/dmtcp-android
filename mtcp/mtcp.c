@@ -454,6 +454,9 @@ struct Thread { Thread *next;         // next thread in 'threads' list
 #endif
 #ifdef ANDROID
                 void *tls;
+
+                int sched_policy;
+                struct sched_param sched_param;
 #endif
 
                 pthread_t pth;
@@ -2017,6 +2020,11 @@ static void *checkpointhread (void *dummy)
   save_tls_state (ckpthread);
   /* Release user thread after we've initialized. */
   sem_post(&sem_start);
+
+#ifdef ANDROID
+  sched_getparam (mtcp_sys_kernel_gettid(), &ckpthread->sched_param);
+  ckpthread->sched_policy = sched_getscheduler(mtcp_sys_kernel_gettid());
+#endif
 
 #ifdef SETJMP
   /* After we restart, we return here. */
@@ -4494,6 +4502,12 @@ static int restarthread (void *threadv)
   struct MtcpRestartThreadArg mtcpRestartThreadArg;
   DPRINTF("!!!--- restarthread ---!!! %d\n", thread->tid);
   restore_tls_state (thread);
+
+#ifdef ANDROID
+  sched_setscheduler(mtcp_sys_kernel_gettid(),
+                     thread->sched_policy,
+                     &thread->sched_param);
+#endif
 
   if (thread == motherofall) {
     // Compute the set of signals which was pending for all the threads at the
