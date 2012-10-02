@@ -864,6 +864,8 @@ void mtcp_init (char const *checkpointfilename,
   }
 #else
   {
+    pthread_internal_t * thread = (pthread_internal_t *)pthread_self();
+    thread->kernel_id = mtcp_sys_kernel_gettid();
 #if 0
     pid_t tls_tid ;
     tls_tid = *(pid_t *) (((unsigned char*)mtcp_get_tls_base_addr()) + TLS_TID_OFFSET());
@@ -4504,6 +4506,8 @@ static int restarthread (void *threadv)
   restore_tls_state (thread);
 
 #ifdef ANDROID
+  pthread_internal_t *thread_it = (pthread_internal_t *)pthread_self();
+  thread_it->kernel_id = mtcp_sys_kernel_gettid();
   sched_setscheduler(mtcp_sys_kernel_gettid(),
                      thread->sched_policy,
                      &thread->sched_param);
