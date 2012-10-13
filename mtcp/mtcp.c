@@ -461,7 +461,9 @@ struct Thread { Thread *next;         // next thread in 'threads' list
 
                 pthread_t pth;
               };
-
+#ifdef ANDROID
+static int pgid;
+#endif
 /*
  * struct MtcpRestartThreadArg
  *
@@ -2023,11 +2025,6 @@ static void *checkpointhread (void *dummy)
   /* Release user thread after we've initialized. */
   sem_post(&sem_start);
 
-#ifdef ANDROID
-  sched_getparam (mtcp_sys_kernel_gettid(), &ckpthread->sched_param);
-  ckpthread->sched_policy = sched_getscheduler(mtcp_sys_kernel_gettid());
-#endif
-
 #ifdef SETJMP
   /* After we restart, we return here. */
   if (sigsetjmp (ckpthread -> jmpbuf, 1) < 0) mtcp_abort ();
@@ -3582,6 +3579,12 @@ static void stopthisthread (int signum)
 
   thread = getcurrenthread (); // see which thread this is
 
+#ifdef ANDROID
+  sched_setscheduler(mtcp_sys_kernel_gettid(),
+                     thread->sched_policy,
+                     &thread->sched_param);
+#endif
+
   // If this is checkpoint thread - exit immidiately
   if ( mtcp_state_value(&thread -> state) == ST_CKPNTHREAD ) {
     return ;
@@ -3625,6 +3628,9 @@ static void stopthisthread (int signum)
      * to grow the former stack beyond the portion that is already mmap'ed.
      */
     if (thread == motherofall) {
+#ifdef ANDROID
+      pgid = getpgid(getpid());
+#endif
       static char *orig_stack_ptr;
       /* FIXME:
        * Some apps will use "ld --stack XXX" with a small stack.  This
@@ -3736,8 +3742,14 @@ static void stopthisthread (int signum)
       wait_for_all_restored ();
       DPRINTF("thread %d restored\n", thread -> tid);
 
+#ifdef ANDROID
+      sched_getparam (mtcp_sys_kernel_gettid(), &ckpthread->sched_param);
+      ckpthread->sched_policy = sched_getscheduler(mtcp_sys_kernel_gettid());
+#endif
       if (thread == motherofall) {
-
+#ifndef ANDROID
+      setpgid(getpid(), pgid);
+#endif
         /* If we're a restore verification, rename the temp file
 	 * over the permanent one
 	 */
@@ -4508,9 +4520,6 @@ static int restarthread (void *threadv)
 #ifdef ANDROID
   pthread_internal_t *thread_it = (pthread_internal_t *)pthread_self();
   thread_it->kernel_id = mtcp_sys_kernel_gettid();
-  sched_setscheduler(mtcp_sys_kernel_gettid(),
-                     thread->sched_policy,
-                     &thread->sched_param);
 #endif
 
   if (thread == motherofall) {
