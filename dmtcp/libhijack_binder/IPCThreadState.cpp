@@ -434,7 +434,7 @@ void IPCThreadState::joinThreadPool(bool isMain)
     // This thread may have been spawned by a thread that was in the background
     // scheduling group, so first we will make sure it is in the default/foreground
     // one to avoid performing an initial transaction in the background.
-    androidSetThreadSchedulingGroup(mMyThreadId, ANDROID_TGROUP_DEFAULT);
+    androidSetThreadSchedulingGroup(androidGetTid(), ANDROID_TGROUP_DEFAULT);
         
     status_t result;
     do {
@@ -483,7 +483,7 @@ void IPCThreadState::joinThreadPool(bool isMain)
         // sure to go in the foreground after executing a transaction, but
         // there are other callbacks into user code that could have changed
         // our group so we want to make absolutely sure it is put back.
-        androidSetThreadSchedulingGroup(mMyThreadId, ANDROID_TGROUP_DEFAULT);
+        androidSetThreadSchedulingGroup(androidGetTid(), ANDROID_TGROUP_DEFAULT);
 
         // Let this thread exit the thread pool if it is no longer
         // needed and it is not the main process thread.
@@ -1000,14 +1000,16 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
             mCallingPid = tr.sender_pid;
             mCallingUid = tr.sender_euid;
             
-            int curPrio = getpriority(PRIO_PROCESS, mMyThreadId);
+            int curPrio = getpriority(PRIO_PROCESS, androidGetTid());
             if (gDisableBackgroundScheduling) {
                 if (curPrio > ANDROID_PRIORITY_NORMAL) {
                     // We have inherited a reduced priority from the caller, but do not
                     // want to run in that state in this process.  The driver set our
                     // priority already (though not our scheduling class), so bounce
                     // it back to the default before invoking the transaction.
-                    setpriority(PRIO_PROCESS, mMyThreadId, ANDROID_PRIORITY_NORMAL);
+                    setpriority(PRIO_PROCESS, androidGetTid(), ANDROID_PRIORITY_NORMAL);
+                    LOGE("HIJACK_BINDER:Grow priority %d [tid = %d]",
+                         curPrio, gettid());
                 }
             } else {
                 if (curPrio >= ANDROID_PRIORITY_BACKGROUND) {
@@ -1016,7 +1018,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
                     // since the driver won't modify scheduling classes for us.
                     // The scheduling group is reset to default by the caller
                     // once this method returns after the transaction is complete.
-                    androidSetThreadSchedulingGroup(mMyThreadId,
+                    androidSetThreadSchedulingGroup(androidGetTid(),
                                                     ANDROID_TGROUP_BG_NONINTERACT);
                 }
             }
