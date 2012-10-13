@@ -490,9 +490,15 @@ extern "C" int ioctl(int d,  int request, ...)
   } else {
     va_start(ap, request);
     WRAPPER_EXECUTION_DISABLE_CKPT();
-    dmtcp::Connection &con =
-      dmtcp::KernelDeviceToConnection::instance().retrieve(d);
-    retval = con.ioctl(d, request, ap);
+    dmtcp::Connection *con =
+      dmtcp::KernelDeviceToConnection::instance().retrieveP(d);
+    if (con) {
+      retval = con->ioctl(d, request, ap);
+    } else {
+      void * arg;
+      arg = va_arg(ap, void *);
+      retval = _real_ioctl(d, request, arg);
+    }
     WRAPPER_EXECUTION_ENABLE_CKPT();
     va_end(ap);
   }

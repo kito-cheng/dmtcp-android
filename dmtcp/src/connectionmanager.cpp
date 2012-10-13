@@ -100,6 +100,25 @@ void dmtcp::ConnectionToFds::erase ( const ConnectionIdentifier& conId )
   _table.erase(it);
 }
 
+dmtcp::Connection *dmtcp::KernelDeviceToConnection::retrieveP ( int fd )
+{
+  dmtcp::string device = fdToDevice ( fd );
+  if ( device.length() <= 0 ) return NULL;
+  iterator i = _table.find ( device );
+
+  if (i == _table.end() && Util::strStartsWith(device, "socket:[")) {
+    JWARNING ( false ) ( fd ) ( device ) ( _table.size() )
+      .Text ( "failed to find connection for fd. Assuming External Socket." );
+    TcpConnection *con = new TcpConnection(-1, -1, -1);
+    con->markExternalConnect();
+    create(fd, con);
+    i = _table.find ( device );
+  }
+
+  if (i == _table.end()) return NULL;
+  return &(ConnectionList::instance() [i->second]);
+}
+
 dmtcp::Connection& dmtcp::KernelDeviceToConnection::retrieve ( int fd )
 {
   dmtcp::string device = fdToDevice ( fd );
