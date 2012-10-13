@@ -3,6 +3,15 @@ LOCAL_PATH:= $(call my-dir)
 common_C_FLAGS := -O0 -g3 -DDEBUG -DTIMING
 
 include $(CLEAR_VARS)
+LOCAL_C_INCLUDES := external/dmtcp/dmtcp/src
+LOCAL_SRC_FILES := dmtcp-pre_user_thread_hook.cpp
+LOCAL_CFLAGS+= $(common_C_FLAGS)
+LOCAL_MODULE := dmtcp-pre_user_thread_hook
+LOCAL_SHARED_LIBRARIES := libdmtcpaware
+LOCAL_MODULE_TAGS := optional
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
 LOCAL_SRC_FILES := dmtcp-tls.cpp
 LOCAL_CFLAGS+= $(common_C_FLAGS)
 LOCAL_MODULE := dmtcp-tls
