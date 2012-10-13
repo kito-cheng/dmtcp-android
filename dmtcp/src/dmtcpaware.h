@@ -27,6 +27,11 @@ extern "C" {
 /// Pointer to a "void foo();" function
 typedef void (*DmtcpFunctionPointer)(void);
 
+typedef void (*DmtcpPreSuspendUserThreadFunctionPointer)(void);
+typedef void (*DmtcpPreResumeUserThreadFunctionPointer)(int is_ckpt,
+                                                        int is_restart);
+
+
 /// Returned by dmtcpGetCoordinatorStatus()
 typedef struct _DmtcpCoordinatorStatus {
 
@@ -106,6 +111,9 @@ int dmtcpInstallHooks( DmtcpFunctionPointer earlyCheckpoint
                       , DmtcpFunctionPointer preCheckpoint
                       , DmtcpFunctionPointer postCheckpoint
                       , DmtcpFunctionPointer postRestart);
+
+int dmtcpInstallPerThreadHooks( DmtcpPreSuspendUserThreadFunctionPointer preSuspend
+                              , DmtcpPreResumeUserThreadFunctionPointer preResume);
 
 /**
  * Gets the coordinator-specific status of DMTCP.

@@ -275,6 +275,14 @@ int __real_dmtcpCheckpointBarrier(){
   return 1;
 }
 
+int __real_dmtcpInstallPerThreadHooks(
+      DmtcpPreSuspendUserThreadFunctionPointer preSuspend,
+      DmtcpPreResumeUserThreadFunctionPointer preResume){
+  if (preSuspend) dmtcp::preSuspendUserThreadFuncs.push_back(preSuspend);
+  if (preResume) dmtcp::preResumeUserThreadFuncs.push_back(preResume);
+  return 1;
+}
+
 int __real_dmtcpBlockBinder() {
   dmtcp::ThreadSync::setBlockBinder(true);
   return 1;
@@ -334,6 +342,12 @@ EXTERNC int __dyn_dmtcpCheckpointBarrier(){
   return __real_dmtcpCheckpointBarrier();
 }
 
+EXTERNC int __dyn_dmtcpInstallPerThreadHooks(
+              DmtcpPreSuspendUserThreadFunctionPointer preSuspend
+            , DmtcpPreResumeUserThreadFunctionPointer preResume){
+  return __real_dmtcpInstallPerThreadHooks(preSuspend, preResume);
+}
+
 EXTERNC int __dyn_dmtcpBlockBinder() {
   return __real_dmtcpBlockBinder();
 }
@@ -383,4 +397,10 @@ EXTERNC int dmtcpRaiseCheckpointBarrier(){
 }
 EXTERNC int dmtcpCheckpointBarrier(){
   return __real_dmtcpCheckpointBarrier();
+}
+
+EXTERNC int dmtcpInstallPerThreadHooks(
+              DmtcpPreSuspendUserThreadFunctionPointer preSuspend
+            , DmtcpPreResumeUserThreadFunctionPointer preResume){
+  return __real_dmtcpInstallPerThreadHooks(preSuspend, preResume);
 }

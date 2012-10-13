@@ -25,6 +25,8 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include "constants.h"
+#include "dmtcpalloc.h"
+#include "dmtcpaware.h"
 
 namespace dmtcp
 {
@@ -102,5 +104,13 @@ extern "C"
   LIB_PRIVATE extern MtcpFuncPtrs_t mtcpFuncPtrs;
 }
 LIB_PRIVATE void* get_mtcp_symbol ( const char* name );
+
+namespace dmtcp
+{
+  extern dmtcp::vector<DmtcpPreResumeUserThreadFunctionPointer>
+    preResumeUserThreadFuncs;
+  extern dmtcp::vector<DmtcpPreSuspendUserThreadFunctionPointer>
+    preSuspendUserThreadFuncs;
+}
 
 #endif

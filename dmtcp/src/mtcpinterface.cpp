@@ -31,6 +31,7 @@
 
 #include "constants.h"
 #include "mtcpinterface.h"
+#include "dmtcpaware.h"
 #include "syscallwrappers.h"
 #include "uniquepid.h"
 #include "dmtcpworker.h"
@@ -58,6 +59,10 @@ static int pidVirtualizationEnabled = 0;
 static int pidVirtualizationEnabled = 0;
 #endif
 
+dmtcp::vector<DmtcpPreResumeUserThreadFunctionPointer>
+  dmtcp::preResumeUserThreadFuncs;
+dmtcp::vector<DmtcpPreSuspendUserThreadFunctionPointer>
+  dmtcp::preSuspendUserThreadFuncs;
 static char prctlPrgName[22] = {0};
 static void prctlGetProcessName();
 static void prctlRestoreProcessName();
@@ -384,6 +389,15 @@ void callbackHoldsAnyLocks(int *retval)
 void callbackPreSuspendUserThread()
 {
   dmtcp::ThreadSync::incrNumUserThreads();
+
+  dmtcp::vector<DmtcpPreSuspendUserThreadFunctionPointer>::iterator itr;
+  for (itr = dmtcp::preSuspendUserThreadFuncs.begin();
+       itr != dmtcp::preSuspendUserThreadFuncs.end();
+       ++itr) {
+    DmtcpPreSuspendUserThreadFunctionPointer resumeFunPtr = *itr;
+    resumeFunPtr();
+  }
+
   dmtcp_process_event(DMTCP_EVENT_PRE_SUSPEND_USER_THREAD, NULL);
 }
 
@@ -397,6 +411,15 @@ void callbackPreResumeUserThread(int is_ckpt, int is_restart)
   // This should be the last significant work before returning from this
   // function.
   dmtcp::ThreadSync::processPreResumeCB();
+
+  dmtcp::vector<DmtcpPreResumeUserThreadFunctionPointer>::iterator itr;
+  for (itr = dmtcp::preResumeUserThreadFuncs.begin();
+       itr != dmtcp::preResumeUserThreadFuncs.end();
+       ++itr) {
+    DmtcpPreResumeUserThreadFunctionPointer resumeFunPtr = *itr;
+    resumeFunPtr(is_ckpt, is_restart);
+  }
+
   // Make a dummy syscall to inform superior of our status before we resume. If
   // ptrace is disabled, this call has no significant effect.
   syscall(DMTCP_FAKE_SYSCALL);
