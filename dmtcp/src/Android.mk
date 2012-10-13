@@ -2,16 +2,17 @@ LOCAL_PATH:= $(call my-dir)
 
 common_C_FLAGS := -O2 -g3 -DHAVE_CONFIG_H
 
+# Define ANDROID_SMP appropriately.
+ifeq ($(TARGET_CPU_SMP),true)
+    common_C_FLAGS += -DANDROID_SMP=1
+else
+    common_C_FLAGS += -DANDROID_SMP=0
+endif
+
 include $(CLEAR_VARS)
 LOCAL_C_INCLUDES := external/stlport/stlport \
                     bionic/
 LOCAL_CFLAGS+= $(common_C_FLAGS)
-# Define ANDROID_SMP appropriately.
-ifeq ($(TARGET_CPU_SMP),true)
-    LOCAL_CFLAGS += -DANDROID_SMP=1
-else
-    LOCAL_CFLAGS += -DANDROID_SMP=0
-endif
 LOCAL_SRC_FILES:=  connectionstate.cpp \
         connection.cpp connectionidentifier.cpp \
         connectionmanager.cpp connectionrewirer.cpp \
