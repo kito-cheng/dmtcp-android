@@ -457,6 +457,8 @@ struct Thread { Thread *next;         // next thread in 'threads' list
 
                 int sched_policy;
                 struct sched_param sched_param;
+
+                int priority;
 #endif
 
                 pthread_t pth;
@@ -3583,6 +3585,7 @@ static void stopthisthread (int signum)
   sched_setscheduler(mtcp_sys_kernel_gettid(),
                      thread->sched_policy,
                      &thread->sched_param);
+  setpriority(PRIO_PROCESS, mtcp_sys_kernel_gettid(), thread->priority);
 #endif
 
   // If this is checkpoint thread - exit immidiately
@@ -3745,6 +3748,7 @@ static void stopthisthread (int signum)
 #ifdef ANDROID
       sched_getparam (mtcp_sys_kernel_gettid(), &ckpthread->sched_param);
       ckpthread->sched_policy = sched_getscheduler(mtcp_sys_kernel_gettid());
+      thread->priority = getpriority(PRIO_PROCESS, mtcp_sys_kernel_gettid());
 #endif
       if (thread == motherofall) {
 #ifndef ANDROID
