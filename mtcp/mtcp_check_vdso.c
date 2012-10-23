@@ -273,6 +273,11 @@ void mtcp_check_vdso_enabled()
   get_at_sysinfo(); /* Initialize pointer to environ for later calls */
 #endif
 
+#ifdef ANDROID_EMULATOR
+  /* Just Ignore check if we are under emulator */
+  return;
+#endif
+
 #ifdef NO_RAND_VA_PERSONALITY
   /* Set ADDR_NO_RANDOMIZE bit;
    * In Ubuntu Linux 2.6.24 kernel, This places vdso in  a different

@@ -5,6 +5,9 @@ common_C_FLAGS :=  -DDEBUG -DTIMING -g3 -O0
 ifeq ($(ARCH_ARM_HAVE_TLS_REGISTER),true)
   common_C_FLAGS += -DHAVE_ARM_TLS_REGISTER
 endif
+ifeq ($(TARGET_PRODUCT),full)
+  common_C_FLAGS += -DANDROID_EMULATOR
+endif
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES:= mtcp.c mtcp_restart_nolibc.c \
         mtcp_maybebpt.c mtcp_printf.c mtcp_util.c \
