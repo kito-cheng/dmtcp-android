@@ -1008,8 +1008,6 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
                     // priority already (though not our scheduling class), so bounce
                     // it back to the default before invoking the transaction.
                     setpriority(PRIO_PROCESS, androidGetTid(), ANDROID_PRIORITY_NORMAL);
-                    LOGE("HIJACK_BINDER:Grow priority %d [tid = %d]",
-                         curPrio, gettid());
                 }
             } else {
                 if (curPrio >= ANDROID_PRIORITY_BACKGROUND) {
