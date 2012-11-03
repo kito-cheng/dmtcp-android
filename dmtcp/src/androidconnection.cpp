@@ -79,7 +79,7 @@ const char *dmtcp::LoggerConnection::logger2path(LoggerType type) {
     case RADIO_LOGGER:  return "/dev/log/radio";
     case SYSTEM_LOGGER: return "/dev/log/system";
     default:
-      JASSERT(false) (type).Text("Unkown logger type");
+      JASSERT(false) ((int)type).Text("Unkown logger type");
       return NULL;
   }
 }

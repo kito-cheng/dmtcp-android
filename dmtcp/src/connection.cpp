@@ -563,7 +563,7 @@ void dmtcp::TcpConnection::restoreSocketPair(const dmtcp::vector<int>& fds,
 #endif
   int sv[2];
   JASSERT(_peerType == PEER_SOCKETPAIR && _socketpairPeerId == peer->id())
-    (_peerType) (_socketpairPeerId) (peer->id());
+    ((int)_peerType) (_socketpairPeerId) (peer->id());
   JASSERT(fds.size() > 0);
   JASSERT(peerfds.size() > 0);
 
