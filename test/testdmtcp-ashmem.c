@@ -59,7 +59,7 @@ static int readline (char *buff, int size);
 
 int end = 0;
 void * mymalloc(size_t x, char *rawmem) {
-  int *result = &(rawmem[end]);
+  int *result = (int*)&(rawmem[end]);
   end += x;
   if (x > 1000000) { printf("malloc:  ERROR\n"); exit(1); }
   return result;
