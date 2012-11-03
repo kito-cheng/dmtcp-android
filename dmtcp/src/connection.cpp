@@ -126,7 +126,7 @@ static bool _isBlacklistedTcp ( int sockfd,
 				const sockaddr* saddr, socklen_t len )
 {
   JASSERT( saddr != NULL );
-  if ( len >= sizeof(saddr->sa_family) && saddr->sa_family == AF_INET ) {
+  if ( (size_t)len >= sizeof(saddr->sa_family) && saddr->sa_family == AF_INET ) {
     struct sockaddr_in* addr = (sockaddr_in*)saddr;
     // Ports 389 and 636 are the well-known ports in /etc/services that
     // are reserved for LDAP.  Bash continues to maintain a connection to
@@ -289,7 +289,7 @@ void dmtcp::TcpConnection::onBind (const struct sockaddr* addr, socklen_t len)
   }
   JASSERT ( tcpType() == TCP_CREATED ) ( tcpType() ) ( id() )
     .Text ( "Binding a socket in use????" );
-  JASSERT ( len <= sizeof _bindAddr ) ( len ) ( sizeof _bindAddr )
+  JASSERT ( (size_t)len <= sizeof _bindAddr ) ( len ) ( sizeof _bindAddr )
     .Text ( "That is one huge sockaddr buddy." );
 
   _type = TCP_BIND;

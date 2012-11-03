@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <syslog.h>
+#include <sys/eventfd.h>
 
 
 // See syscallsreal.c for original model.  In dmtcphijack.so, system calls

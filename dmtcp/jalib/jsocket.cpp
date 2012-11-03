@@ -120,7 +120,7 @@ jalib::JSockAddr::JSockAddr ( const char* hostname /* == NULL*/,
 
   JWARNING (e == 0) (e) (gai_strerror(e)) (hostname) .Text ("No such host");
   if (e == 0) {
-    JASSERT(sizeof(*_addr) >= res->ai_addrlen)(sizeof(*_addr))(res->ai_addrlen);
+    JASSERT(sizeof(*_addr) >= (size_t)res->ai_addrlen)(sizeof(*_addr))(res->ai_addrlen);
 
     // 1. count number of addresses returned
     struct addrinfo *r;
@@ -157,8 +157,8 @@ bool jalib::JSocket::connect ( const JSockAddr& addr, int port )
   if (addr._addr->sin_port == (unsigned short)-2)
     return false;
   for(unsigned int i=0; i< addr._count; i++){
-    if( ret = JSocket::connect( (sockaddr*)(addr._addr + i),
-                                sizeof(addr._addr[0]), port ) ){
+    if(( ret = JSocket::connect( (sockaddr*)(addr._addr + i),
+                                 sizeof(addr._addr[0]), port ) )){
       break;
     }else{
       if( errno != ECONNREFUSED)
@@ -174,9 +174,9 @@ bool jalib::JSocket::connect ( const  struct  sockaddr  *addr,
 {
   struct sockaddr_storage addrbuf;
   memset ( &addrbuf,0,sizeof ( addrbuf ) );
-  JASSERT ( addrlen <= sizeof ( addrbuf ) ) ( addrlen ) ( sizeof ( addrbuf ) );
+  JASSERT ( (size_t)addrlen <= sizeof ( addrbuf ) ) ( addrlen ) ( sizeof ( addrbuf ) );
   memcpy ( &addrbuf,addr,addrlen );
-  JWARNING ( addrlen == sizeof ( sockaddr_in ) ) ( addrlen )
+  JWARNING ( (size_t)addrlen == sizeof ( sockaddr_in ) ) ( addrlen )
           ( sizeof ( sockaddr_in ) ).Text ( "may not be correct socket type" );
   ( (sockaddr_in*)&addrbuf )->sin_port = htons ( port );
   return jalib::connect( _sockfd, (sockaddr*)&addrbuf, addrlen ) == 0;

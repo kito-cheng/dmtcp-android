@@ -317,7 +317,7 @@ extern "C" int tm_spawn(int argc, char **argv, char **envp, tm_node_id where,
   for (i = 0; i < dsize; i++) {
     new_argv[i] = dmtcp_args[i].c_str();
   }
-  for (i = 0; i < argc; i++) {
+  for (i = 0; i < (size_t)argc; i++) {
     new_argv[ dsize + i ] = argv[i];
   }
   for (i = 0; i< dsize + argc; i++ ) {

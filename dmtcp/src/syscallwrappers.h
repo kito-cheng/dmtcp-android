@@ -450,11 +450,12 @@ LIB_PRIVATE extern __thread int thread_performing_dlopen_dlsym;
   int   _real_waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
   pid_t _real_wait4(pid_t pid, __WAIT_STATUS status, int options,
                     struct rusage *rusage);
-
+#ifndef ANDROID
   int _real_shmget (int key, size_t size, int shmflg);
   void* _real_shmat (int shmid, const void *shmaddr, int shmflg);
   int _real_shmdt (const void *shmaddr);
   int _real_shmctl (int shmid, int cmd, struct shmid_ds *buf);
+#endif
   pid_t _real_getpid();
 #ifdef __cplusplus
 }

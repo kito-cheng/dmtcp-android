@@ -70,7 +70,7 @@ static void dmtcp_resume_checkpoint() {
 
     int ret = binder->pingBinder();
     bool alive = binder->isBinderAlive(); 
-    LOGI("dmtcp_resume_checkpoint %x %d %d", ret, alive, NO_ERROR);
+    LOGI("dmtcp_resume_checkpoint %x %d %lld", ret, alive, NO_ERROR);
   }
 }
 }

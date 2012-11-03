@@ -250,7 +250,7 @@ int main(int argc, char** argv)
       perror(error_msg);
       doAbort = true;
     } else if (buf.st_uid != getuid()) { /*Could also run if geteuid() matches*/
-      printf("\nProcess uid (%d) doesn't match uid (%d) of\n" \
+      printf("\nProcess uid (%d) doesn't match uid (%lu) of\n" \
              "checkpoint image (%s).\n" \
 	     "This is dangerous.  Aborting for security reasons.\n" \
              "If you still want to do this (at your own risk),\n" \

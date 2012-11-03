@@ -401,7 +401,7 @@ extern "C" int syscall(int sys_num, ... )
     }
     case SYS_open:
     {
-      SYSCALL_GET_ARGS_3(const char*,pathname,int,flags,mode_t,mode);
+      SYSCALL_GET_ARGS_3(const char*,pathname,int,flags,int,mode);
       ret = open(pathname, flags, mode);
       break;
     }

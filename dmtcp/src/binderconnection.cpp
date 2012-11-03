@@ -168,9 +168,9 @@ int dmtcp::BinderConnection::ioctl(int fd, int request, va_list args) {
     JTRACE ("set binder context mgr") ( id() ) ( _is_context_mgr );
   } else if (request == BINDER_THREAD_EXIT) {
     JTRACE ("binder thread exit") ( id() );
-  } else if (request == BINDER_VERSION) {
+  } else if ((unsigned)request == BINDER_VERSION) {
     JTRACE ("get binder version") ( id() );
-  } else if (request == BINDER_WRITE_READ) {
+  } else if ((unsigned)request == BINDER_WRITE_READ) {
     binder_write_read *bwr = va_arg(local_ap, binder_write_read*);
     JTRACE ("binder read/write") ( id() )
            (bwr->write_size)
@@ -225,14 +225,14 @@ template<class T>
 static inline
 T getAndAdvance(VoidPtr &ptr){
   T ret = *(T*)ptr;
-  ptr += sizeof(T);
+  ptr = (VoidPtr)((char*)ptr + sizeof(T));
   return ret;
 }
 
 void dmtcp::BinderConnection::writeHandler(struct binder_write_read *bwr) {
   uint32_t cmd;
-  void *ptr = (void*)bwr->write_buffer + bwr->write_consumed;
-  void *end = (void*)bwr->write_buffer + bwr->write_size;
+  void *ptr = (void*)((char*)bwr->write_buffer + bwr->write_consumed);
+  void *end = (void*)((char*)bwr->write_buffer + bwr->write_size);
   while (ptr < end) {
     cmd = getAndAdvance<uint32_t>(ptr);
     switch (cmd) {
@@ -322,10 +322,9 @@ int dmtcp::BinderConnection::readHandler(int fd,
   int ret = _real_ioctl(fd, BINDER_WRITE_READ, bwr);
   if (ret < 0) return ret;
   JTRACE("readHandler");
-  //android::Parcel reply;
   uint32_t cmd;
-  void *ptr = (void*)old_bwr.read_buffer + old_bwr.read_consumed;
-  void *end = (void*)old_bwr.read_buffer + old_bwr.read_size;
+  void *ptr = (void*)((char*)old_bwr.read_buffer + old_bwr.read_consumed);
+  void *end = (void*)((char*)old_bwr.read_buffer + old_bwr.read_size);
   struct binder_transaction_data tr;
   int32_t err;
   while (ptr < end) {
@@ -428,8 +427,8 @@ void dmtcp::BinderConnection::transactionHandler(
                                 bool reply) {
   size_t *offp, *off_end;
   void *buffer_data = (void*)tr->data.ptr.buffer;
-  offp = (size_t*)(buffer_data + tr->data_size);
-  off_end = (size_t*)((void *)offp + tr->offsets_size);
+  offp = (size_t*)((char*)buffer_data + tr->data_size);
+  off_end = (size_t*)((char*)offp + tr->offsets_size);
   JTRACE ("Transaction") (tr->target.handle)
                          (tr->cookie)
                          (tr->code)
@@ -442,7 +441,7 @@ void dmtcp::BinderConnection::transactionHandler(
                          (offp) (off_end);
   for (; offp < off_end; offp++) {
     struct flat_binder_object *fp;
-    fp = (struct flat_binder_object *)(buffer_data + *offp);
+    fp = (struct flat_binder_object *)((char*)buffer_data + *offp);
     switch (fp->type) {
       case BINDER_TYPE_BINDER:
       case BINDER_TYPE_WEAK_BINDER:

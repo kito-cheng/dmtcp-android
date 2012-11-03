@@ -108,9 +108,9 @@ struct TLSData{
   bool _isOkToGrabWrapperExecutionLock;
   bool _hasThreadFinishedInitialization;
 };
-
+static const TLSData defaultTLSData = {0, 0, false, false, true, false};
 static TLSData &getTLSData() {
-  static dmtcp::TLS<TLSData> tlsData = TLSData{0, 0, false, false, true, false};
+  static dmtcp::TLS<TLSData> tlsData = defaultTLSData;
   return tlsData;
 }
 #define _wrapperExecutionLockLockCount  getTLSData()._wrapperExecutionLockLockCount
