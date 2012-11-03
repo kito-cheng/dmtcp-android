@@ -290,7 +290,7 @@ void mtcp_readfile(int fd, void *buf, size_t size)
   int tries = 0;
 
   while(ar != size) {
-    rc = mtcp_sys_read(fd, buf + ar, size - ar);
+    rc = mtcp_sys_read(fd, (char*)buf + ar, size - ar);
     if (rc < 0 && rc > -4096) { /* kernel could return large unsigned int */
       MTCP_PRINTF("error %d reading checkpoint\n", mtcp_sys_errno);
       mtcp_abort();

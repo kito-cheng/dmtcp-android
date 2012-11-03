@@ -470,5 +470,10 @@ void *mtcp_safemmap(void *start, size_t length, int prot, int flags, int fd,
 int mtcp_setjmp (Jmpbuf *jmpbuf);
 void mtcp_longjmp (Jmpbuf *jmpbuf, int retval);
 int mtcp_safe_open(char const *filename, int flags, mode_t mode);
+void mtcp_get_memory_region_of_this_library(VA *startaddr, VA *endaddr);
+int mtcp_selfmap_open();
+int mtcp_selfmap_readline(int selfmapfd, VA *startaddr, VA *endaddr,
+	                  off_t *file_offset);
+int mtcp_selfmap_close(int selfmapfd);
 
 #endif

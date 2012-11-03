@@ -336,7 +336,7 @@ static void readfiledescrs (void)
     mtcp_readfile(mtcp_restore_cpfd, &statbuf, sizeof statbuf);
     mtcp_readfile(mtcp_restore_cpfd, &offset, sizeof offset);
     mtcp_readfile(mtcp_restore_cpfd, &linklen, sizeof linklen);
-    if (linklen >= sizeof linkbuf) {
+    if ((size_t)linklen >= sizeof linkbuf) {
       MTCP_PRINTF("filename too long %d\n", linklen);
       mtcp_abort ();
     }
@@ -737,7 +737,8 @@ static void adjust_for_smaller_file_size(Area *area, int fd)
 {
   off_t curr_size = mtcp_sys_lseek(fd, 0, SEEK_END);
   if (curr_size == -1) return;
-  if (curr_size < area->filesize && (area->offset + area->size > curr_size)) {
+  if (curr_size < (off_t)area->filesize &&
+      ((off_t)(area->offset + area->size) > curr_size)) {
     size_t diff_in_size = (area->offset + area->size) - curr_size;
     size_t anon_area_size = (diff_in_size + MTCP_PAGE_SIZE - 1)
                              & MTCP_PAGE_MASK;
@@ -783,7 +784,7 @@ const char* mtcp_getenv(const char* name)
 {
   int i;
   extern char **environ;
-  ssize_t len = mtcp_strlen(name);
+  size_t len = mtcp_strlen(name);
 
   if (environ == NULL)
     return NULL;
@@ -816,7 +817,7 @@ static void restore_property(Area* area, int flags)
   struct prop_area *pa;
   int s, fd;
   unsigned sz;
-  char *env;
+  const char *env;
   DPRINTF("try to get system property...\n");
   env = mtcp_getenv("ANDROID_PROPERTY_WORKSPACE");
   if (!env) {
@@ -992,7 +993,7 @@ static void read_shared_memory_area_from_file(Area* area, int flags)
      * OpenMPI.
      */
     int file_size = mtcp_sys_lseek(imagefd, 0, SEEK_END);
-    if (area->size > file_size) {
+    if (area->size > (size_t)file_size) {
       DPRINTF("File size (%d) on disk smaller than mmap() size (%d).\n"
               "  Extending it to mmap() size.\n", file_size, area->size);
 #ifndef ANDROID

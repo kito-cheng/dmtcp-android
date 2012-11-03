@@ -1165,7 +1165,7 @@ Thread *mtcp_prepare_for_clone (int (*fn) (void *arg), void *child_stack,
                                 int *flags, void *arg, int *parent_tidptr,
                                 struct user_desc *newtls, int **child_tidptr)
 {
-  Thread *thread;
+  Thread *thread = NULL;
 
   /* Maybe they decided not to call mtcp_init */
   if (motherofall != NULL) {
@@ -1690,7 +1690,7 @@ void mtcp_threadiszombie(void)
 
 static void threadisdead (Thread *thread)
 {
-  Thread **lthread, *parent, *xthread;
+  Thread **lthread, *parent, *xthread = NULL;
 
   if (! is_thread_locked()) {
     DPRINTF("MTCP: Internal error: threadisdead called without thread lock\n");
@@ -4053,9 +4053,9 @@ static void save_tls_state (Thread *thisthread)
 #endif
 }
 
-static char *memsubarray (char *array, char *subarray, int len) {
+static char *memsubarray (char *array, char *subarray, size_t len) {
    char *i_ptr;
-   int j;
+   size_t j;
    int word1 = *(int *)subarray;
    // Assume subarray length is at least sizeof(int) and < 2048.
    if (len < sizeof(int))

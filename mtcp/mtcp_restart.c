@@ -525,7 +525,7 @@ char* getenv(const char* name)
 {
   int i;
   extern char **environ;
-  ssize_t len = mtcp_strlen(name);
+  size_t len = mtcp_strlen(name);
 
   if (environ == NULL)
     return NULL;

@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
     readall(fd, &statbuf, sizeof statbuf);
     readall(fd, &offset, sizeof offset);
     readall(fd, &linklen, sizeof linklen);
-    if (linklen >= sizeof linkbuf) {
+    if ((size_t)linklen >= sizeof linkbuf) {
       printf ("filename too long %d\n", linklen);
       exit(1);
     }

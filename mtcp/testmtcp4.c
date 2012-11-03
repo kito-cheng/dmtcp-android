@@ -133,7 +133,7 @@ static int threadno = 0;
 static void *produca_func (void *dummy)
 
 {
-  int *babblebuff, babblelen, count, i, iter, j, queuewasempty;
+  int *babblebuff = NULL, babblelen, count, i, iter, j, queuewasempty;
   struct timespec sleeptime;
 
   do count = threadno;                                       // get an unique number for low digit
