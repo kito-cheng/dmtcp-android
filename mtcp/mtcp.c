@@ -105,9 +105,19 @@
 #include <pthread_internal.h>
 #include <asm/sigcontext.h>
 
-//XXX: just compilable
-#define setcontext(c) mtcp_abort()
-#define getcontext(c) -1
+struct ucontext {
+    unsigned long     uc_flags;
+    struct ucontext  *uc_link;
+    stack_t       uc_stack;
+    struct sigcontext uc_mcontext;
+    sigset_t      uc_sigmask;   /* mask last for extensibility */
+};
+typedef struct ucontext ucontext_t;
+
+extern int getcontext (ucontext_t *__ucp);
+extern int setcontext (const ucontext_t *__ucp);
+//#define getcontext(x) 0
+//#define setcontext(x) 0
 
 static inline int sigandset(sigset_t *dest, sigset_t *left, sigset_t *right) {
     sigset_t *__dest = (dest);
@@ -176,9 +186,9 @@ if (DEBUG_RESTARTING) \
 // In field of 'struct Thread':
 #ifndef ANDROID
 # define JMPBUF_SP savctx.uc_mcontext.gregs[SAVEDSP]
-#else
+#else /* ANDROID */
 # define JMPBUF_SP savctx.uc_mcontext.esp
-#endif
+#endif /* ANDROID */
 #endif
 
 /* TLS segment registers used differently in i386 and x86_64. - Gene */
@@ -391,17 +401,6 @@ static sem_t sem_start;
 
 typedef struct Thread Thread;
 
-#ifdef ANDROID
-struct ucontext {
-    unsigned long     uc_flags;
-    struct ucontext  *uc_link;
-    stack_t       uc_stack;
-    struct sigcontext uc_mcontext;
-    sigset_t      uc_sigmask;   /* mask last for extensibility */
-};
-typedef struct ucontext ucontext_t;
-#endif
-
 struct Thread { Thread *next;         // next thread in 'threads' list
                 Thread *prev;        // prev thread in 'threads' list
                 int tid;              // this thread's id as returned by
@@ -534,7 +533,12 @@ static Thread *ckpthread = NULL;
 static Thread *threads = NULL;
 static Thread *threads_freelist = NULL;
 /* NOTE:  NSIG == SIGRTMAX+1 == 65 on Linux; NSIG is const, SIGRTMAX isn't */
+#ifndef ANDROID
 static struct sigaction sigactions[NSIG];  /* signal handlers */
+#else
+/* In bionic SIGRTMAX = _NSIG = 64, but NSIG = 32...*/
+static struct sigaction sigactions[SIGRTMAX+1];  /* signal handlers */
+#endif
 static size_t restore_size;
 static VA restore_begin, restore_end;
 VA mtcp_restore_begin, mtcp_restore_end;
@@ -1134,7 +1138,7 @@ Thread *mtcp_prepare_for_clone (int (*fn) (void *arg), void *child_stack,
 
     /* Save exactly what the caller is supplying */
 
-    thread -> clone_flags   = *flags;
+    thread -> clone_flags   = flags;
     thread -> parent_tidptr = parent_tidptr;
     thread -> given_tidptr  = *child_tidptr;
 

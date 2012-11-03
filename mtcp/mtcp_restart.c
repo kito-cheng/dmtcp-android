@@ -49,7 +49,9 @@
 
 #include "mtcp_internal.h"
 
+#ifndef ANDROID
 #include <sys/personality.h>
+#endif
 
 #define BINARY_NAME "mtcp_restart"
 
@@ -91,6 +93,7 @@ int main (int argc, char *argv[], char *envp[])
   int orig_argc = argc;
   environ = envp;
 
+#ifndef ANDROID
   if (mtcp_sys_getuid() == 0 || mtcp_sys_geteuid() == 0) {
     mtcp_printf("Running mtcp_restart as root is dangerous.  Aborting.\n" \
 	   "If you still want to do this (at your own risk)," \
@@ -98,6 +101,7 @@ int main (int argc, char *argv[], char *envp[])
 	   __FILE__, __LINE__ - 4);
     mtcp_abort();
   }
+#endif
 
   // Turn off randomize_va (by re-exec'ing) or warn user if vdso_enabled is on.
   mtcp_check_vdso_enabled();
