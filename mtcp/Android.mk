@@ -1,7 +1,7 @@
 LOCAL_PATH:= $(call my-dir)
 
 MTCP_LOCAL_CFLAGS:=-DHIGHEST_VA='(VA)0xffffe000' -fno-stack-protector
-common_C_FLAGS :=  -DDEBUG -DTIMING -g3 -O0
+common_C_FLAGS :=  -DDEBUG -DTIMING -O2
 ifeq ($(ARCH_ARM_HAVE_TLS_REGISTER),true)
   common_C_FLAGS += -DHAVE_ARM_TLS_REGISTER
 endif
