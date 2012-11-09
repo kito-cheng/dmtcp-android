@@ -1711,6 +1711,7 @@ static void threadisdead (Thread *thread)
 
   /* Remove thread block from parent's list of children */
   parent = thread -> parent;
+  xthread = parent -> children;
   if (parent != NULL) {
     for (lthread = &(parent -> children);
          xthread && (xthread = *lthread) != thread;
